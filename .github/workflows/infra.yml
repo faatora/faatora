@@ -1,0 +1,36 @@
+name: Infra
+on:
+  pull_request:
+    paths: ['infra/**']
+  push:
+    branches: [main]
+    paths: ['infra/**']
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'me-south-1' }}
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=fawtara-tfstate" \
+            -backend-config="key=global/terraform.tfstate" \
+            -backend-config="region=${{ vars.TF_STATE_REGION || 'us-east-1' }}" \
+            -backend-config="dynamodb_table=fawtara-tflock"
+      - run: terraform fmt -check
+      - run: terraform validate
+      - run: terraform plan -var="environment=production" -out=tfplan
+      - name: Terraform apply (main only)
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan

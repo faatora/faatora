@@ -1,0 +1,5 @@
+**/dist
+**/node_modules
+**/.terraform
+apps/web/dist
+pnpm-lock.yaml

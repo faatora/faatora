@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.*
+!.env.example
+coverage/
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+tfplan
+# misc
+.DS_Store
+*.tsbuildinfo
