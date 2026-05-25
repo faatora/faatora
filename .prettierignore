@@ -3,3 +3,4 @@
 **/.terraform
 apps/web/dist
 pnpm-lock.yaml
+**/*.md
