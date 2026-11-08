@@ -1,15 +1,30 @@
 variable "aws_region" {
-  description = "Region where workloads (RDS, ECS, archive) are created."
-  type        = string
-  default     = "me-south-1"
+  type    = string
+  default = "me-south-1"
 }
 
 variable "environment" {
-  description = "Deployment environment."
-  type        = string
+  type = string
 }
 
 variable "project" {
   type    = string
   default = "fawtara"
+}
+
+variable "enable_infra" {
+  type    = bool
+  default = false
+}
+
+variable "vpc_cidr" {
+  type        = string
+  description = "CIDR block for the VPC created by the network module."
+  default     = "10.20.0.0/16"
+}
+
+variable "db_multi_az" {
+  type        = bool
+  description = "Enable multi-AZ for the primary RDS instance."
+  default     = true
 }
