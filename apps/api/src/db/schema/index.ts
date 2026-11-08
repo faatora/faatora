@@ -1,4 +1,15 @@
-// Drizzle table definitions live here. They mirror the node-pg-migrate
-// migrations (the source of truth for DDL) to give type-safe queries.
-// EP2 adds: tenants, users, memberships (+ RLS). EP3 adds: parties, invoices, ...
-export {};
+export * from './tenancy';
+export * from './invoicing';
+export * from './leads';
+export * from './bookkeeping';
+export * from './signing';
+export * from './billing';
+export * from './accountant';
+export * from './pos';
+export * from './imports';
+export * from './archive';
+export * from './clearance';
+export * from './firm-billing';
+export * from './firms';
+export * from './firm-imports';
+export * from './audit';

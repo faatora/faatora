@@ -1,11 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { loadEnv, type Env } from './env';
-
 export const ENV = 'ENV';
-
 @Global()
-@Module({
-  providers: [{ provide: ENV, useFactory: (): Env => loadEnv() }],
-  exports: [ENV],
-})
+@Module({ providers: [{ provide: ENV, useFactory: (): Env => loadEnv() }], exports: [ENV] })
 export class ConfigModule {}

@@ -2,10 +2,9 @@ import { Global, Module } from '@nestjs/common';
 import { Pool } from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { loadEnv } from '../config/env';
-
+import * as schema from './schema';
 export const DB = 'DB';
-export type Database = NodePgDatabase<Record<string, never>>;
-
+export type Database = NodePgDatabase<typeof schema>;
 @Global()
 @Module({
   providers: [
@@ -14,7 +13,7 @@ export type Database = NodePgDatabase<Record<string, never>>;
       useFactory: (): Database => {
         const env = loadEnv();
         const pool = new Pool({ connectionString: env.DATABASE_URL, max: 10 });
-        return drizzle(pool);
+        return drizzle(pool, { schema });
       },
     },
   ],
