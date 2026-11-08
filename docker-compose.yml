@@ -5,9 +5,7 @@ services:
       POSTGRES_USER: fawtara
       POSTGRES_PASSWORD: fawtara
       POSTGRES_DB: fawtara
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    ports: ['5432:5432']
+    volumes: [pgdata:/var/lib/postgresql/data]
 volumes:
   pgdata: {}

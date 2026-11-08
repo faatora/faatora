@@ -6,12 +6,17 @@ build/
 .env.*
 !.env.example
 coverage/
-# terraform
 .terraform/
 *.tfstate
 *.tfstate.*
-crash.log
 tfplan
-# misc
 .DS_Store
 *.tsbuildinfo
+
+# bundler and framework caches
+.turbo/
+.pnpm-store/
+.next/
+.vite/
+.cache/
+crash.log

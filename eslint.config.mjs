@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/.terraform/**',
       'apps/web/dist/**',
       'apps/api/migrations/**',
+      'apps/api/scripts/**',
     ],
   },
   js.configs.recommended,

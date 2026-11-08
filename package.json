@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "dev:api": "pnpm --filter @fawtara/api start:dev",
     "dev:web": "pnpm --filter @fawtara/web dev",
-    "db:migrate": "pnpm --filter @fawtara/api db:migrate"
+    "db:migrate": "pnpm --filter @fawtara/api db:migrate",
+    "provision:user": "node apps/api/scripts/provision-test-user.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

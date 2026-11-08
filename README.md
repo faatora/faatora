@@ -1,42 +1,55 @@
-<<<<<<< HEAD
-# fawtara
-E-invoicing
-=======
 # Fawtara
 
-Multi-tenant Oman e-invoicing SaaS (OTA Fawtara / Peppol PINT-OM compliant).
-Monorepo: NestJS API + React web + a pure compliance core, on AWS.
+Multi-tenant Oman e-invoicing SaaS (OTA Fawtara / Peppol PINT-OM).
 
-## Layout
+## Operations
 
-- `apps/api` — NestJS backend (TypeScript). Structured logging, env validation, Drizzle + RLS-ready tenant transactions, health endpoint.
-- `apps/web` — React + Vite shell (smoke-tests the API).
-- `packages/compliance` — EP4: pure PINT-OM / UBL 2.1 core (placeholder).
-- `packages/shared` — cross-cutting types.
-- `infra` — Terraform (IaC). State backend + workload region are independent.
-- `.github/workflows` — `ci.yml` (lint/typecheck/test/build) and `infra.yml` (Terraform via AWS OIDC).
+Fawtara is a tier-0 compliance product; the API is instrumented end-to-end so an SRE at 3 AM can tell what's wrong from Prometheus + logs alone.
 
-## Run locally
+### Metrics endpoint
 
-Requires Node >= 20 and Docker.
+- `GET /metrics` on each API node returns Prometheus exposition-format metrics (text/plain; version=0.0.4).
+- The endpoint is intentionally unauthenticated — the response contains only aggregate counters, histograms, and gauges, with no PII and only opaque `tenant_id` labels. **In production, restrict `/metrics` at the network layer** to the Prometheus scraper's security group / CIDR, either on the ALB or on an in-cluster service mesh policy. See `apps/api/src/common/observability/metrics.controller.ts`.
+- Metric families emitted:
+  - `fawtara_http_requests_total`, `fawtara_http_request_duration_seconds` — request-level RED metrics.
+  - `fawtara_invoice_issued_total`, `fawtara_signing_total` — business counters.
+  - `fawtara_clearance_submissions_total`, `fawtara_clearance_latency_seconds`, `fawtara_clearance_rejection_reason_total`, `fawtara_clearance_queue_depth`, `fawtara_clearance_dlq_size` — the clearance pipeline.
+  - `fawtara_canary_last_success_timestamp` — synthetic end-to-end canary (fires every 60 s, validates the compliance core + DB).
+  - `fawtara_node_*` — default Node process / event-loop metrics.
 
-```bash
-corepack enable                       # gives pnpm
-cp .env.example apps/api/.env         # adjust if needed
-docker compose up -d                  # local Postgres on :5432
-pnpm install
-pnpm db:migrate                       # applies migrations
-pnpm dev:api                          # API on :3000  -> GET /api/health
-pnpm dev:web                          # web on :5173
+### Pointing Prometheus / Grafana at the service
+
+A minimal `prometheus.yml` scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: fawtara-api
+    scrape_interval: 15s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['fawtara-api.internal:3000']
 ```
 
-## CI/CD prerequisites (set once)
+For Grafana, point a Prometheus data source at that scrape target and import the dashboards tracked under `docs/sla.md`. The dashboards expected to exist are: platform overview, clearance pipeline, tenant quality, and signing.
 
-- GitHub repo secret `AWS_DEPLOY_ROLE_ARN` = the OIDC deploy role ARN.
-- (Optional) repo variables `AWS_REGION` (workload region, default me-south-1) and
-  `TF_STATE_REGION` (state-bucket region, default us-east-1).
+### Alerting
 
-## Status
+Alerts are delivered through a swappable sink (`AlertSink` port, `ALERT_SINK` DI token). The default is `LogAlertSink` (writes through the Nest/pino logger with severity-mapped levels). For production, bind `WebhookAlertSink` in `apps/api/src/common/observability/observability.module.ts` and set:
 
-EP1 — Platform foundation & CI/CD. Tenant tables, RLS, and Cognito auth land in EP2.
->>>>>>> EP1: platform foundation & CI/CD scaffold
+```bash
+export FAWTARA_ALERT_WEBHOOK=https://api.opsgenie.com/v2/alerts  # or PagerDuty, or a Slack Incoming Webhook
+```
+
+The webhook sink POSTs a JSON envelope `{ severity, title, details, source, emitted_at }`. If `FAWTARA_ALERT_WEBHOOK` is unset the sink is a logged no-op (so a mis-provisioned environment is loud, not crashing).
+
+### Runbooks
+
+Operational runbooks live under `docs/runbooks/`. The current set:
+
+- [`clearance-asp-down.md`](docs/runbooks/clearance-asp-down.md) — ASP outage response, circuit-breaker usage, manual drain.
+- [`clearance-rejections-spike.md`](docs/runbooks/clearance-rejections-spike.md) — reason-code drill-down and replay flow.
+- [`dlq-filling.md`](docs/runbooks/dlq-filling.md) — DLQ triage, replay vs delete decisioning.
+- [`signing-key-rotation.md`](docs/runbooks/signing-key-rotation.md) — KMS/local key rotation with a dual-sign window.
+- [`data-dictionary-update.md`](docs/runbooks/data-dictionary-update.md) — PINT-OM rule-pack bump procedure.
+
+The SLOs these runbooks defend are declared in [`docs/sla.md`](docs/sla.md).
