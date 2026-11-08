@@ -1,0 +1,437 @@
+{
+  "brand": "Fawtara",
+  "tagline": "Simple invoicing for growing businesses",
+  "cta": {
+    "start": "Get started"
+  },
+  "nav": {
+    "en": "English",
+    "ar": "Arabic"
+  },
+  "landing": {
+    "title": "Oman e-invoicing readiness check",
+    "subtitle": "See where your business stands and what's next for the April and October 2027 deadlines.",
+    "cta": "Start readiness check"
+  },
+  "checker": {
+    "title": "e-Invoicing readiness check",
+    "subtitle": "Answer 10 quick questions to see how ready your business is for Oman e-invoicing.",
+    "step": "Step {{step}} of {{total}}",
+    "q1_fullName": "What is your full name?",
+    "q2_companyName": "What is your company's legal name?",
+    "q3_email": "What is your work email?",
+    "q4_phone": "What is your mobile number?",
+    "q4_phoneHint": "Oman format, e.g. +968 9123 4567",
+    "q5_vatRegistered": "Is your business registered for VAT in Oman?",
+    "yes": "Yes",
+    "no": "No",
+    "q6_revenue": "What is your approximate annual revenue (OMR)?",
+    "revenue": {
+      "<=100k": "Up to 100,000",
+      "100k-500k": "100,000 – 500,000",
+      "500k-1M": "500,000 – 1,000,000",
+      "1M-5M": "1,000,000 – 5,000,000",
+      ">5M": "More than 5,000,000"
+    },
+    "q7_currentTool": "How do you currently issue invoices?",
+    "q7_currentToolHint": "Pick a preset or type your own tool name.",
+    "tool": {
+      "excel": "Excel",
+      "tally": "Tally",
+      "zohoBooks": "Zoho Books",
+      "quickBooks": "QuickBooks",
+      "odoo": "Odoo",
+      "other": "Other"
+    },
+    "q8_volume": "Roughly how many invoices do you issue each month?",
+    "volume": {
+      "<100": "Less than 100",
+      "100-500": "100 – 500",
+      "500-2000": "500 – 2,000",
+      ">2000": "More than 2,000"
+    },
+    "q9_b2c": "What share of your invoices goes to consumers (B2C)?",
+    "b2c": {
+      "0": "None (B2B only)",
+      "<25": "Less than 25%",
+      "25-50": "25% – 50%",
+      ">50": "More than 50%"
+    },
+    "q10_erp": "Do you use an ERP or accounting system? (optional)",
+    "erp": {
+      "sap": "SAP",
+      "oracle": "Oracle",
+      "odoo": "Odoo",
+      "none": "None",
+      "other": "Other"
+    },
+    "q11_review": "Please review your answers",
+    "q12_confirmTitle": "Ready to submit",
+    "q12_confirmBody": "We'll compute your readiness score and send a copy of the result to {{email}}.",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "submitError": "We couldn't reach the server. Please check your connection and try again.",
+    "result": {
+      "readyTitle": "You're ready",
+      "notReadyTitle": "Not ready yet",
+      "score": "Readiness score",
+      "deadline": "Your deadline",
+      "deadlineApr": "1 April 2027",
+      "deadlineOct": "1 October 2027",
+      "blockers": "What's blocking you",
+      "recommendations": "Recommended next steps",
+      "share": "Copy result link",
+      "shareCopied": "Link copied",
+      "restart": "Start over"
+    }
+  },
+  "pos": {
+    "title": "Point of sale",
+    "search": "Search by name or scan a barcode",
+    "cart": "Cart",
+    "qty": "Qty",
+    "subtotal": "Subtotal",
+    "vatTotal": "VAT",
+    "grandTotal": "Total",
+    "tender": {
+      "cash": "Cash",
+      "card": "Card",
+      "mixed": "Mixed"
+    },
+    "tendered": "Tendered",
+    "change": "Change",
+    "complete": "Complete sale",
+    "print": "Print receipt",
+    "offline_pending": "{{count}} sale queued offline",
+    "offline_pending_plural": "{{count}} sales queued offline",
+    "empty": "Cart is empty — pick a product or scan a barcode",
+    "add_to_cart": "Add",
+    "remove": "Remove",
+    "newSale": "New sale",
+    "receiptTitle": "Receipt",
+    "soldAt": "Sold at",
+    "saleNumber": "Sale #",
+    "notFound": "No product found for this code",
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "accountant": {
+    "dashboard": "Accountant dashboard",
+    "firm": {
+      "create": "Create firm",
+      "name": "Firm name"
+    },
+    "creating": "Creating…",
+    "createError": "Could not create your firm. Please try again.",
+    "no_firm_cta": "Set up your accounting firm to start managing clients across tenants.",
+    "link_client": "Link client",
+    "link_client_hint": "Paste the tenant ID of a client you already have access to.",
+    "mark_referred": "I referred this client (eligible for revenue share)",
+    "tenant_id": "Tenant ID",
+    "link": "Link",
+    "linking": "Linking…",
+    "linkError": "Could not link that tenant. Check the ID and your access.",
+    "cancel": "Cancel",
+    "clients": "Clients",
+    "no_clients": "No clients linked yet. Use \"Link client\" to add your first.",
+    "invoices_this_month": "Invoices this month",
+    "vat_output": "VAT output",
+    "overdue_ar": "Overdue AR",
+    "switch_to": "Switch to tenant",
+    "referred_badge": "Referred",
+    "col": {
+      "name": "Client",
+      "status": "Status"
+    },
+    "loading": "Loading…",
+    "loadError": "Could not load your firm data.",
+    "pleaseLogIn": "Please log in to continue."
+  },
+  "firms": {
+    "nav": {
+      "members": "Members",
+      "clients": "Clients"
+    },
+    "role": {
+      "owner": "Owner",
+      "partner": "Partner",
+      "staff": "Staff",
+      "read_only": "Read only"
+    },
+    "not_found": {
+      "title": "Page not found",
+      "body": "The page you are looking for is not available yet.",
+      "home": "Back to home"
+    },
+    "switcher": {
+      "aria": "Switch firm",
+      "chooseFirm": "Choose firm",
+      "your_firms": "Your firms",
+      "active": "Active",
+      "empty": "You have no firms yet.",
+      "create": "Create firm",
+      "accept_invitation": "Accept invitation"
+    },
+    "bootstrap": {
+      "title": "Create your accounting firm",
+      "subtitle": "Set up a firm profile so you can start managing client tenants from one place.",
+      "name": "Firm name",
+      "legal_name": "Legal name",
+      "cr_number": "CR number",
+      "vatin": "VAT number",
+      "vatin_hint": "Optional. Add it later from firm settings if you do not have one yet.",
+      "email": "Contact email",
+      "phone": "Contact phone",
+      "cancel": "Cancel",
+      "submit": "Create firm",
+      "submitting": "Creating…",
+      "error": "Could not create your firm. Please try again.",
+      "unauthorized": "Please sign in to create a firm."
+    },
+    "members": {
+      "title": "Firm members",
+      "subtitle_fallback": "Manage access for this firm",
+      "missing_firm": "Select a firm to view its members.",
+      "loading": "Loading members…",
+      "load_error": "Could not load members.",
+      "sign_in": "Please sign in to view members.",
+      "empty": "No members yet. Invite someone to get started.",
+      "invite": "Invite member",
+      "invite_title": "Invite a new member",
+      "invite_email": "Email",
+      "invite_role": "Role",
+      "send_invite": "Send invite",
+      "sending": "Sending…",
+      "invite_error": "Could not send the invitation. Please try again.",
+      "cancel": "Cancel",
+      "remove": "Remove",
+      "remove_title": "Remove member",
+      "remove_confirm": "Remove {{email}} from this firm?",
+      "remove_error": "Could not remove the member. Please try again.",
+      "removing": "Removing…",
+      "status": {
+        "invited": "Invited",
+        "active": "Active"
+      },
+      "col": {
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "joined": "Joined"
+      }
+    },
+    "accept": {
+      "title": "Accept firm invitation",
+      "missing_token": "No invitation token was provided. Please use the link from your email.",
+      "accepting": "Accepting your invitation…",
+      "sign_in": "Please sign in to accept this invitation.",
+      "error": "We could not accept this invitation. The link may be invalid or expired.",
+      "retry": "Try again",
+      "back": "Go home"
+    },
+    "dashboard": {
+      "title": "Firm dashboard",
+      "missing_firm": "Select a firm to view its dashboard.",
+      "sign_in": "Please sign in to view this dashboard.",
+      "load_error": "Could not load the dashboard. Please try again.",
+      "retry": "Retry",
+      "summary_aria": "Firm summary",
+      "summary": {
+        "clients": "Clients",
+        "invoices_30d": "Invoices (30d)",
+        "vat_collected": "VAT collected (30d)",
+        "pending_submission": "Pending submission",
+        "failed": "Failed clearance",
+        "overdue": "Overdue"
+      },
+      "per_client": {
+        "title": "Clients",
+        "empty": "No clients yet.",
+        "col": {
+          "client": "Client",
+          "invoices_30d": "Invoices (30d)",
+          "vat_collected": "VAT (OMR)",
+          "last_submission": "Last submission",
+          "issues": "Issues"
+        }
+      },
+      "issues": {
+        "title": "Recent issues",
+        "empty": "No open issues across your clients."
+      },
+      "vat_returns": {
+        "title": "Upcoming VAT returns",
+        "empty": "No upcoming VAT returns.",
+        "due": "Due {{date}}",
+        "status": {
+          "draft": "Draft",
+          "submitted": "Submitted",
+          "overdue": "Overdue"
+        }
+      },
+      "empty": {
+        "title": "No clients yet",
+        "body": "Link your first client tenant to start seeing consolidated KPIs across your practice.",
+        "cta": "Onboard a client"
+      }
+    }
+  },
+  "imports": {
+    "wizard": {
+      "title": "Import invoices",
+      "subtitle": "Bring your client's existing books into Fawtara from Tally or Zoho Books.",
+      "next": "Next",
+      "back": "Back",
+      "commit": "Commit import",
+      "steps_aria": "Import wizard steps",
+      "clients_error": "Could not load your clients. Reload the page.",
+      "step": {
+        "format": "Format",
+        "tenant": "Client",
+        "upload": "Upload",
+        "review": "Review",
+        "done": "Done"
+      },
+      "format": {
+        "title": "Which export format is this?",
+        "tally_daybook_csv": "Tally Day Book CSV",
+        "tally_sales_register_csv": "Tally Sales Register CSV",
+        "tally_xml": "Tally Prime XML",
+        "zoho_books_csv": "Zoho Books CSV"
+      },
+      "tenant": {
+        "title": "Which client is this for?",
+        "empty": "No clients onboarded yet. Add one before importing."
+      },
+      "upload": {
+        "title": "Upload the exported file",
+        "subtitle": "The file is parsed on the server. Nothing is written yet.",
+        "busy": "Parsing file..."
+      },
+      "review": {
+        "title": "Review the preview",
+        "empty": "No rows found.",
+        "col": {
+          "number": "Invoice #",
+          "date": "Date",
+          "party": "Party",
+          "taxable": "Taxable",
+          "vat": "VAT",
+          "total": "Total",
+          "status": "Status"
+        },
+        "status": {
+          "ok": "OK",
+          "duplicate": "Duplicate",
+          "error": "Error"
+        }
+      },
+      "summary": {
+        "total": "Total rows",
+        "valid": "Valid",
+        "error": "Errors",
+        "duplicate": "Duplicates"
+      },
+      "mapping": {
+        "title": "Column mapping",
+        "unset": "(none)",
+        "save": "Save this mapping for next time"
+      },
+      "errors": {
+        "title": "Row errors"
+      },
+      "done": {
+        "title": "Import complete",
+        "committed": "{{n}} invoices committed as DRAFT",
+        "skipped": "{{n}} duplicates skipped",
+        "errored": "{{n}} rows with errors",
+        "filename": "Source file: {{name}}"
+      }
+    }
+  },
+  "clients": {
+    "wizard": {
+      "title": "Onboard a client",
+      "subtitle": "Add one client at a time or upload a CSV for bulk onboarding.",
+      "modeLabel": "Onboarding mode",
+      "single": "Add one client",
+      "batch": "Add multiple from CSV",
+      "single.tenantName": "Client business name",
+      "single.crNumber": "CR number",
+      "single.vatin": "VATIN",
+      "single.country": "Country",
+      "single.accessLevel": "Access level",
+      "single.accessLevel.full": "Full access",
+      "single.accessLevel.readOnly": "Read only",
+      "single.engagementType": "Engagement type",
+      "single.engagementType.ongoing": "Ongoing",
+      "single.engagementType.periodic": "Periodic",
+      "single.shopOwnerEmail": "Shop owner email (optional)",
+      "single.submit": "Add client",
+      "single.submitting": "Adding…",
+      "single.success": "{{name}} has been added to your firm.",
+      "single.successHint": "You can act as this client from the client list.",
+      "single.addAnother": "Add another client",
+      "batch.fileLabel": "Upload a CSV file",
+      "batch.fileHint": "Columns: tenantName, crNumber, vatin, country, accessLevel, engagementType, shopOwnerEmail. Up to 50 rows per upload.",
+      "batch.pasteLabel": "…or paste CSV text",
+      "batch.previewHeader": "Preview: {{total}} rows parsed · {{valid}} ready · {{invalid}} with errors",
+      "batch.col.tenantName": "Name",
+      "batch.col.crNumber": "CR",
+      "batch.col.vatin": "VATIN",
+      "batch.col.notes": "Notes",
+      "batch.submit": "Onboard {{count}} client(s)",
+      "batch.submitting": "Onboarding…",
+      "batch.resultsHeader": "{{created}} onboarded · {{failed}} failed",
+      "batch.startOver": "Upload another batch"
+    },
+    "list": {
+      "title": "Clients",
+      "subtitle": "All client tenants engaged by your firm.",
+      "addNew": "Add client",
+      "loading": "Loading clients…",
+      "error": "Could not load clients.",
+      "empty": "No clients yet.",
+      "revokeConfirm": "Revoke this client engagement? Historical data remains, but you will lose cross-tenant access.",
+      "filter.status": "Status",
+      "filter.engagement": "Engagement",
+      "filter.active": "Active",
+      "filter.revoked": "Revoked",
+      "filter.ongoing": "Ongoing",
+      "filter.periodic": "Periodic",
+      "filter.all": "All",
+      "col.name": "Client",
+      "col.engagement": "Engagement",
+      "col.accessLevel": "Access",
+      "col.actions": "Actions",
+      "action.viewInvoices": "View invoices",
+      "action.revoke": "Revoke",
+      "action.revoking": "Revoking…"
+    }
+  },
+  "ops": {
+    "title": "Batch operations",
+    "subtitle": "Run checks and exports across all of your clients.",
+    "validateAll": {
+      "title": "Validate all pending invoices",
+      "body": "Dry-run the compliance pipeline against every DRAFT invoice in every client tenant. Nothing is changed.",
+      "run": "Run validation",
+      "running": "Running…",
+      "summary": "{{tenants}} tenants · {{drafts}} drafts · {{passed}} passed · {{failed}} failed",
+      "col.tenant": "Client",
+      "col.drafts": "Drafts",
+      "col.passed": "Passed",
+      "col.failed": "Failed"
+    },
+    "vatReturn": {
+      "title": "Export VAT return summaries",
+      "body": "Download one CSV row per client, aggregating invoice totals for the selected period.",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "download": "Download CSV",
+      "downloading": "Preparing…"
+    }
+  }
+}
