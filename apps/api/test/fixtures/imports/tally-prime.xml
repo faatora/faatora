@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ENVELOPE>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDATA>
+        <TALLYMESSAGE>
+          <VOUCHER>
+            <DATE>20260110</DATE>
+            <VOUCHERNUMBER>XML-1</VOUCHERNUMBER>
+            <PARTYLEDGERNAME>Epsilon LLC</PARTYLEDGERNAME>
+            <PARTYVATIN>OM3300000055</PARTYVATIN>
+            <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
+            <LEDGERENTRIES.LIST>
+              <LEDGERNAME>Epsilon LLC</LEDGERNAME>
+              <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
+              <AMOUNT>-105.000</AMOUNT>
+            </LEDGERENTRIES.LIST>
+            <LEDGERENTRIES.LIST>
+              <LEDGERNAME>Sales Account</LEDGERNAME>
+              <ISPARTYLEDGER>No</ISPARTYLEDGER>
+              <AMOUNT>100.000</AMOUNT>
+            </LEDGERENTRIES.LIST>
+            <LEDGERENTRIES.LIST>
+              <LEDGERNAME>VAT @ 5%</LEDGERNAME>
+              <ISPARTYLEDGER>No</ISPARTYLEDGER>
+              <AMOUNT>5.000</AMOUNT>
+            </LEDGERENTRIES.LIST>
+          </VOUCHER>
+          <VOUCHER>
+            <DATE>20260111</DATE>
+            <VOUCHERNUMBER>XML-2</VOUCHERNUMBER>
+            <PARTYLEDGERNAME>Zeta LLC</PARTYLEDGERNAME>
+            <PARTYVATIN>OM3300000066</PARTYVATIN>
+            <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
+            <LEDGERENTRIES.LIST>
+              <LEDGERNAME>Zeta LLC</LEDGERNAME>
+              <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
+              <AMOUNT>-210.000</AMOUNT>
+            </LEDGERENTRIES.LIST>
+            <LEDGERENTRIES.LIST>
+              <LEDGERNAME>Sales Account</LEDGERNAME>
+              <AMOUNT>200.000</AMOUNT>
+            </LEDGERENTRIES.LIST>
+            <LEDGERENTRIES.LIST>
+              <LEDGERNAME>VAT @ 5%</LEDGERNAME>
+              <AMOUNT>10.000</AMOUNT>
+            </LEDGERENTRIES.LIST>
+          </VOUCHER>
+        </TALLYMESSAGE>
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>

@@ -1,0 +1,5 @@
+Invoice Date,Invoice ID,Customer Name,Customer ID,Customer VATIN,Item Name,Quantity,Rate,Discount,Tax Name,Tax %,Total
+2026-02-01,ZB-001,Gamma Trading,CUST-1,OM2200000033,Widget,2,50.000,0,VAT,5,105.000
+2026-02-01,ZB-001,Gamma Trading,CUST-1,OM2200000033,Gadget,1,10.000,0,VAT,5,10.500
+2026-02-02,ZB-002,Delta Supplies,CUST-2,OM2200000044,Service,1,80.000,0,VAT,5,84.000
+2026-02-05,ZB-003,Epsilon Partners,CUST-3,OM2200000055,Consulting,10,100.000,0,VAT,5,1050.000

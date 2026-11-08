@@ -1,0 +1,7 @@
+Date,Voucher Type,Voucher No.,Debit Ledger,Credit Ledger,Debit Amount,Credit Amount,Narration
+15-01-2026,Sales,DB-1,Omega LLC,,105.000,0,Omega sale
+15-01-2026,Sales,DB-1,,Sales Account,0,100.000,Omega sale
+15-01-2026,Sales,DB-1,,VAT @ 5%,0,5.000,Omega sale
+16-01-2026,Sales,DB-2,Delta Co,,52.500,0,Delta sale
+16-01-2026,Sales,DB-2,,Sales Account,0,50.000,Delta sale
+16-01-2026,Sales,DB-2,,VAT @ 5%,0,2.500,Delta sale
