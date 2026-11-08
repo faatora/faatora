@@ -64,7 +64,7 @@ const SALES_REGISTER_HEADERS = [
 ];
 
 function normalizeHeader(h: string): string {
-  return h.replace(/﻿/g, '').trim();
+  return h.replace(/\uFEFF/g, '').trim();
 }
 
 function toNumber(raw: string | undefined): number {
@@ -141,7 +141,7 @@ function groupDayBookByVoucher(lines: DayBookLine[]): RawRow[] {
 }
 
 export async function parseTallyCsv(buffer: Buffer): Promise<RawParseResult> {
-  const text = buffer.toString('utf-8').replace(/^﻿/, '');
+  const text = buffer.toString('utf-8').replace(/^\uFEFF/, '');
   const errors: RowError[] = [];
   if (text.trim().length === 0) {
     errors.push({ sourceRowNo: 0, message: 'CSV is empty' });

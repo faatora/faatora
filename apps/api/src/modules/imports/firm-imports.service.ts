@@ -260,7 +260,6 @@ export class FirmImportsService {
     }
 
     // Save the edited mapping for future imports if requested.
-    const mappingUsed = editedMapping ?? snap.mapping;
     if (saveMapping && editedMapping) {
       await this.mappings.saveForFirm(firmId, snap.sourceFormat, editedMapping);
     }

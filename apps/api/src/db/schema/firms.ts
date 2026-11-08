@@ -17,7 +17,6 @@ import {
   text,
   timestamp,
   index,
-  unique,
   uniqueIndex,
   check,
 } from 'drizzle-orm/pg-core';

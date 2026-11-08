@@ -32,11 +32,9 @@ describe('BatchOperationsPage', () => {
   beforeEach(() => {
     // jsdom lacks URL.createObjectURL by default.
     if (!('createObjectURL' in URL)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (URL as any).createObjectURL = vi.fn(() => 'blob:mock');
     }
     if (!('revokeObjectURL' in URL)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (URL as any).revokeObjectURL = vi.fn();
     }
   });

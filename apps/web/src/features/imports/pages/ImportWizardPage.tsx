@@ -29,7 +29,6 @@ import { useFirmContext } from '../../firms/context/FirmContext';
 import type { FirmClientTenant } from '../../firms/types';
 import {
   commitImport,
-  getColumnMapping,
   previewImport,
   saveColumnMapping,
 } from '../api';

@@ -18,7 +18,7 @@ import {
   type ClientTenantRecord,
   type CreateClientTenantInput,
 } from '../api/clients';
-import { mapCsvRows, parseCsv, type CsvMappedRow } from '../components/csvParser';
+import { mapCsvRows, parseCsv } from '../components/csvParser';
 
 type Mode = 'single' | 'batch';
 

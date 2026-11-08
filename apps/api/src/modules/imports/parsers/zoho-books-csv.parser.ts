@@ -49,7 +49,7 @@ export const ZOHO_BOOKS_CANONICAL_HEADERS = [
 ];
 
 function normalizeHeader(h: string): string {
-  return h.replace(/﻿/g, '').trim();
+  return h.replace(/\uFEFF/g, '').trim();
 }
 
 function toNumber(raw: string | undefined): number {
@@ -61,7 +61,7 @@ function toNumber(raw: string | undefined): number {
 }
 
 export async function parseZohoBooksCsv(buffer: Buffer): Promise<RawParseResult> {
-  const text = buffer.toString('utf-8').replace(/^﻿/, '');
+  const text = buffer.toString('utf-8').replace(/^\uFEFF/, '');
   const errors: RowError[] = [];
   if (text.trim().length === 0) {
     errors.push({ sourceRowNo: 0, message: 'CSV is empty' });

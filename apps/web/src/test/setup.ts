@@ -8,7 +8,6 @@ if (!globalThis.crypto) {
   globalThis.crypto = {};
 }
 if (typeof globalThis.crypto.randomUUID !== 'function') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (globalThis.crypto as any).randomUUID = () =>
     '00000000-0000-4000-8000-000000000000';
 }

@@ -155,8 +155,8 @@ function synthesiseType(obj: Record<string, unknown>): string {
 
 function mapStatusFromTxn(obj: Record<string, unknown>): BillingSubscriptionStatus {
   if (Boolean(obj.is_refunded) || Boolean(obj.is_voided)) return 'canceled';
-  if (Boolean(obj.pending)) return 'incomplete';
-  if (Boolean(obj.success)) return 'active';
+  if (obj.pending) return 'incomplete';
+  if (obj.success) return 'active';
   return 'past_due';
 }
 
