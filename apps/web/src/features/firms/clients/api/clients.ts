@@ -63,20 +63,16 @@ export function onboardClient(
   firmId: string,
   input: CreateClientTenantInput,
 ): Promise<ClientTenantRecord> {
-  return apiPost<ClientTenantRecord>(
-    `/firms/${encodeURIComponent(firmId)}/clients/onboard`,
-    input,
-  );
+  return apiPost<ClientTenantRecord>(`/firms/${encodeURIComponent(firmId)}/clients/onboard`, input);
 }
 
 export function batchOnboard(
   firmId: string,
   clients: CreateClientTenantInput[],
 ): Promise<BatchOnboardResult> {
-  return apiPost<BatchOnboardResult>(
-    `/firms/${encodeURIComponent(firmId)}/clients/batch`,
-    { clients },
-  );
+  return apiPost<BatchOnboardResult>(`/firms/${encodeURIComponent(firmId)}/clients/batch`, {
+    clients,
+  });
 }
 
 export function validateAll(firmId: string): Promise<ValidationPreviewResult> {

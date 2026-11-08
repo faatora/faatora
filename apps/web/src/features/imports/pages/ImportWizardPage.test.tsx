@@ -59,7 +59,15 @@ function stubPreview(opts?: { duplicateRows?: number; errorRows?: number; errors
       },
     ],
     errors,
-    headers: ['Date', 'Voucher No.', 'Party Ledger', 'Party VATIN', 'Taxable Amount', 'VAT Amount', 'Total Amount'],
+    headers: [
+      'Date',
+      'Voucher No.',
+      'Party Ledger',
+      'Party VATIN',
+      'Taxable Amount',
+      'VAT Amount',
+      'Total Amount',
+    ],
     mapping: {
       invoiceNumber: 'Voucher No.',
       invoiceDate: 'Date',
@@ -98,9 +106,7 @@ describe('ImportWizardPage', () => {
   });
 
   it('step 1 shows all four source formats and gates Next behind a choice', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
-      makeResponse(200, stubClients()),
-    );
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => makeResponse(200, stubClients()));
     const user = userEvent.setup();
     renderPage();
     expect(await screen.findByTestId('step-format')).toBeInTheDocument();
@@ -167,9 +173,7 @@ describe('ImportWizardPage', () => {
     expect(await screen.findByTestId('step-done')).toBeInTheDocument();
 
     // Confirm the preview call carried the sourceFormat + tenantId in the query string.
-    const previewCall = fetchSpy.mock.calls.find(([u]) =>
-      String(u).includes('/imports/preview'),
-    );
+    const previewCall = fetchSpy.mock.calls.find(([u]) => String(u).includes('/imports/preview'));
     expect(previewCall).toBeTruthy();
     expect(String(previewCall![0])).toContain(`tenantId=${TENANT_ID}`);
     expect(String(previewCall![0])).toContain('sourceFormat=tally_sales_register_csv');
@@ -291,9 +295,7 @@ describe('ImportWizardPage', () => {
   });
 
   it('back navigation returns to the previous step', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
-      makeResponse(200, stubClients()),
-    );
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => makeResponse(200, stubClients()));
     const user = userEvent.setup();
     renderPage();
     await user.click(await screen.findByTestId('format-tally_xml'));

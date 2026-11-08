@@ -18,15 +18,23 @@ import {
  */
 export interface StripeLike {
   customers: {
-    create(params: Stripe.CustomerCreateParams, options?: { idempotencyKey?: string }): Promise<Stripe.Customer>;
+    create(
+      params: Stripe.CustomerCreateParams,
+      options?: { idempotencyKey?: string },
+    ): Promise<Stripe.Customer>;
   };
   subscriptions: {
-    create(params: Stripe.SubscriptionCreateParams, options?: { idempotencyKey?: string }): Promise<Stripe.Subscription>;
+    create(
+      params: Stripe.SubscriptionCreateParams,
+      options?: { idempotencyKey?: string },
+    ): Promise<Stripe.Subscription>;
     cancel(id: string): Promise<Stripe.Subscription>;
   };
   billingPortal: {
     sessions: {
-      create(params: Stripe.BillingPortal.SessionCreateParams): Promise<Stripe.BillingPortal.Session>;
+      create(
+        params: Stripe.BillingPortal.SessionCreateParams,
+      ): Promise<Stripe.BillingPortal.Session>;
     };
   };
   webhooks: {
@@ -71,9 +79,7 @@ export class StripeBilling implements BillingProvider {
   static fromEnv(env: NodeJS.ProcessEnv = process.env): StripeBilling {
     const secret = env.STRIPE_SECRET_KEY;
     if (!secret) {
-      throw new BillingProviderError(
-        'STRIPE_SECRET_KEY is required when BILLING_PROVIDER=stripe',
-      );
+      throw new BillingProviderError('STRIPE_SECRET_KEY is required when BILLING_PROVIDER=stripe');
     }
     const whSecret = env.STRIPE_WEBHOOK_SECRET;
     if (!whSecret) {

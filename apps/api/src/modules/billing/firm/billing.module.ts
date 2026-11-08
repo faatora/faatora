@@ -1,9 +1,5 @@
 import { Logger, Module } from '@nestjs/common';
-import {
-  BILLING_PROVIDER,
-  type BillingProvider,
-  BillingProviderError,
-} from './billing.port';
+import { BILLING_PROVIDER, type BillingProvider, BillingProviderError } from './billing.port';
 import { StripeBilling } from './stripe-billing';
 import { PaymobBilling } from './paymob-billing';
 import { FirmBillingService } from './billing.service';
@@ -92,8 +88,7 @@ export class FirmBillingModule {}
 
 function makeStubProvider(providerName: 'stripe' | 'paymob'): BillingProvider {
   const refuse = (): never => {
-    const varName =
-      providerName === 'stripe' ? 'STRIPE_SECRET_KEY' : 'PAYMOB_API_KEY';
+    const varName = providerName === 'stripe' ? 'STRIPE_SECRET_KEY' : 'PAYMOB_API_KEY';
     throw new BillingProviderError(
       `FirmBilling stub: ${varName} was not set at boot. Configure credentials to enable.`,
     );

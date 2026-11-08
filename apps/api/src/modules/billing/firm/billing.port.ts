@@ -26,12 +26,7 @@ export interface ProviderCustomer {
 }
 
 export type BillingSubscriptionStatus =
-  | 'trialing'
-  | 'active'
-  | 'past_due'
-  | 'canceled'
-  | 'unpaid'
-  | 'incomplete';
+  'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete';
 
 export interface ProviderSubscription {
   readonly providerSubscriptionId: string;

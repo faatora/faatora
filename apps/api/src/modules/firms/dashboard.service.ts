@@ -102,12 +102,7 @@ export class FirmDashboardService {
           createdAt: firmClientTenants.createdAt,
         })
         .from(firmClientTenants)
-        .where(
-          and(
-            eq(firmClientTenants.firmId, firmId),
-            isNull(firmClientTenants.revokedAt),
-          ),
-        );
+        .where(and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)));
 
       const totalClients = clientLinks.length;
       const tenantIds = clientLinks.map((c) => c.tenantId);

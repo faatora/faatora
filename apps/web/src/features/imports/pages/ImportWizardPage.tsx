@@ -14,24 +14,14 @@
  * so no explicit mirror logic is needed inside the wizard.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ChangeEvent,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { ApiError } from '../../../lib/api';
 import { listFirmClients } from '../../firms/api';
 import { useFirmContext } from '../../firms/context/FirmContext';
 import type { FirmClientTenant } from '../../firms/types';
-import {
-  commitImport,
-  previewImport,
-  saveColumnMapping,
-} from '../api';
+import { commitImport, previewImport, saveColumnMapping } from '../api';
 import {
   IMPORT_SOURCE_FORMATS,
   type ColumnMapping,
@@ -112,7 +102,7 @@ export function ImportWizardPage() {
       } catch (err) {
         const message =
           err instanceof ApiError
-            ? (err.body as { message?: string })?.message ?? err.message
+            ? ((err.body as { message?: string })?.message ?? err.message)
             : (err as Error).message;
         setUploadError(message);
       } finally {
@@ -148,7 +138,7 @@ export function ImportWizardPage() {
     } catch (err) {
       const message =
         err instanceof ApiError
-          ? (err.body as { message?: string })?.message ?? err.message
+          ? ((err.body as { message?: string })?.message ?? err.message)
           : (err as Error).message;
       setCommitError(message);
     } finally {
@@ -439,9 +429,7 @@ export function ImportWizardPage() {
             {t('imports.wizard.done.title')}
           </h2>
           <ul className="list-disc ps-6 pe-6 space-y-1 text-sm text-slate-800">
-            <li>
-              {t('imports.wizard.done.committed', { n: commitResult.rowCountCommitted })}
-            </li>
+            <li>{t('imports.wizard.done.committed', { n: commitResult.rowCountCommitted })}</li>
             <li>{t('imports.wizard.done.skipped', { n: commitResult.rowCountSkipped })}</li>
             <li>{t('imports.wizard.done.errored', { n: commitResult.rowCountErrored })}</li>
           </ul>
@@ -496,27 +484,13 @@ function PreviewTable({
         <thead className="bg-slate-50">
           <tr>
             <th className="ps-2 pe-2 py-1 text-start">#</th>
-            <th className="ps-2 pe-2 py-1 text-start">
-              {t('imports.wizard.review.col.number')}
-            </th>
-            <th className="ps-2 pe-2 py-1 text-start">
-              {t('imports.wizard.review.col.date')}
-            </th>
-            <th className="ps-2 pe-2 py-1 text-start">
-              {t('imports.wizard.review.col.party')}
-            </th>
-            <th className="ps-2 pe-2 py-1 text-start">
-              {t('imports.wizard.review.col.taxable')}
-            </th>
-            <th className="ps-2 pe-2 py-1 text-start">
-              {t('imports.wizard.review.col.vat')}
-            </th>
-            <th className="ps-2 pe-2 py-1 text-start">
-              {t('imports.wizard.review.col.total')}
-            </th>
-            <th className="ps-2 pe-2 py-1 text-start">
-              {t('imports.wizard.review.col.status')}
-            </th>
+            <th className="ps-2 pe-2 py-1 text-start">{t('imports.wizard.review.col.number')}</th>
+            <th className="ps-2 pe-2 py-1 text-start">{t('imports.wizard.review.col.date')}</th>
+            <th className="ps-2 pe-2 py-1 text-start">{t('imports.wizard.review.col.party')}</th>
+            <th className="ps-2 pe-2 py-1 text-start">{t('imports.wizard.review.col.taxable')}</th>
+            <th className="ps-2 pe-2 py-1 text-start">{t('imports.wizard.review.col.vat')}</th>
+            <th className="ps-2 pe-2 py-1 text-start">{t('imports.wizard.review.col.total')}</th>
+            <th className="ps-2 pe-2 py-1 text-start">{t('imports.wizard.review.col.status')}</th>
           </tr>
         </thead>
         <tbody>

@@ -27,10 +27,7 @@ import { withFirmTenant } from '../../db/with-firm-tenant';
 import { firmClientTenants } from '../../db/schema/firms';
 import { invoices, invoiceLines } from '../../db/schema/invoicing';
 import { tenants } from '../../db/schema/tenancy';
-import {
-  COMPLIANCE_VALIDATOR,
-  type ComplianceValidator,
-} from '../invoices/compliance.port';
+import { COMPLIANCE_VALIDATOR, type ComplianceValidator } from '../invoices/compliance.port';
 import { computeTotals, type LineInput } from '../invoices/money';
 
 export interface ValidationPreviewPerTenant {
@@ -89,9 +86,7 @@ export class BatchOperationsService {
       const rawLinks = await tx
         .select({ tenantId: firmClientTenants.tenantId })
         .from(firmClientTenants)
-        .where(
-          and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)),
-        );
+        .where(and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)));
       const out: Array<{ tenantId: string; tenantName: string }> = [];
       for (const l of rawLinks) {
         await tx.execute(sql`select set_config('app.tenant_id', ${l.tenantId}, true)`);
@@ -112,59 +107,54 @@ export class BatchOperationsService {
 
     for (const link of links) {
       try {
-        const tenantSummary = await withFirmTenant(
-          this.db,
-          firmId,
-          link.tenantId,
-          async (tx) => {
-            // Explicit tenant_id filter in addition to the RLS gate.
-            // withFirmTenant sets both app.firm_id and app.tenant_id;
-            // under the firm-SELECT invoice branch (ADR-0003 option a)
-            // a bare SELECT would also return rows from other tenants
-            // linked to this firm. The explicit filter is defense in
-            // depth so the per-tenant summary reflects exactly this
-            // tenant's drafts.
-            const drafts = await tx
+        const tenantSummary = await withFirmTenant(this.db, firmId, link.tenantId, async (tx) => {
+          // Explicit tenant_id filter in addition to the RLS gate.
+          // withFirmTenant sets both app.firm_id and app.tenant_id;
+          // under the firm-SELECT invoice branch (ADR-0003 option a)
+          // a bare SELECT would also return rows from other tenants
+          // linked to this firm. The explicit filter is defense in
+          // depth so the per-tenant summary reflects exactly this
+          // tenant's drafts.
+          const drafts = await tx
+            .select()
+            .from(invoices)
+            .where(and(eq(invoices.status, 'DRAFT'), eq(invoices.tenantId, link.tenantId)));
+          const failures: ValidationPreviewPerTenant['failures'] = [];
+          let passed = 0;
+          let failed = 0;
+          for (const inv of drafts) {
+            const lines = await tx
               .select()
-              .from(invoices)
-              .where(and(eq(invoices.status, 'DRAFT'), eq(invoices.tenantId, link.tenantId)));
-            const failures: ValidationPreviewPerTenant['failures'] = [];
-            let passed = 0;
-            let failed = 0;
-            for (const inv of drafts) {
-              const lines = await tx
-                .select()
-                .from(invoiceLines)
-                .where(eq(invoiceLines.invoiceId, inv.id))
-                .orderBy(invoiceLines.lineNo);
-              // Compute totals from current line data so the preview
-              // matches what issue() would see.
-              const totals =
-                lines.length > 0
-                  ? computeTotals(
-                      lines.map<LineInput>((l) => ({
-                        quantity: Number(l.quantity),
-                        unitPrice: Number(l.unitPrice),
-                        vatCategory: l.vatCategory,
-                        vatRate: Number(l.vatRate),
-                      })),
-                    )
-                  : undefined;
-              const result = await this.compliance.validate({ invoice: inv, lines, totals });
-              if (result.ok) {
-                passed++;
-              } else {
-                failed++;
-                failures.push({
-                  invoiceId: inv.id,
-                  number: inv.number,
-                  errors: result.errors ?? ['unknown'],
-                });
-              }
+              .from(invoiceLines)
+              .where(eq(invoiceLines.invoiceId, inv.id))
+              .orderBy(invoiceLines.lineNo);
+            // Compute totals from current line data so the preview
+            // matches what issue() would see.
+            const totals =
+              lines.length > 0
+                ? computeTotals(
+                    lines.map<LineInput>((l) => ({
+                      quantity: Number(l.quantity),
+                      unitPrice: Number(l.unitPrice),
+                      vatCategory: l.vatCategory,
+                      vatRate: Number(l.vatRate),
+                    })),
+                  )
+                : undefined;
+            const result = await this.compliance.validate({ invoice: inv, lines, totals });
+            if (result.ok) {
+              passed++;
+            } else {
+              failed++;
+              failures.push({
+                invoiceId: inv.id,
+                number: inv.number,
+                errors: result.errors ?? ['unknown'],
+              });
             }
-            return { totalDraft: drafts.length, passed, failed, failures };
-          },
-        );
+          }
+          return { totalDraft: drafts.length, passed, failed, failures };
+        });
         perTenant.push({
           tenantId: link.tenantId,
           tenantName: link.tenantName,
@@ -238,9 +228,7 @@ export class BatchOperationsService {
       const links = await tx
         .select({ tenantId: firmClientTenants.tenantId })
         .from(firmClientTenants)
-        .where(
-          and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)),
-        );
+        .where(and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)));
       if (links.length === 0) return [];
 
       // Legacy-policy NULLIF retrofit landed; sentinel no longer needed (see migration 1710001900000)

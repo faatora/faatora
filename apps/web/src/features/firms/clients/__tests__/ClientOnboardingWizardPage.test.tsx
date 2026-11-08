@@ -27,10 +27,7 @@ function makeResponse(status: number, body: unknown, ctype = 'application/json')
 function renderWizard(onCompleted?: (r: unknown) => void) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <ClientOnboardingWizardPage
-        firmId="firm-xyz"
-        onCompleted={onCompleted as never}
-      />
+      <ClientOnboardingWizardPage firmId="firm-xyz" onCompleted={onCompleted as never} />
     </I18nextProvider>,
   );
 }

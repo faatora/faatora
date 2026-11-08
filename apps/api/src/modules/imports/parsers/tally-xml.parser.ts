@@ -121,8 +121,9 @@ export async function parseTallyXml(buffer: Buffer): Promise<RawParseResult> {
       (v.PARTYLEDGERNAME ?? v.PARTYNAME ?? '').toString().trim() ||
       ledgers.find((l) => l.ISPARTYLEDGER === 'Yes')?.LEDGERNAME ||
       '';
-    const partyVatin =
-      (v.PARTYVATIN ?? v.PARTYGSTIN ?? v.BUYERVATIN ?? v.BUYERGSTIN ?? '').toString().trim();
+    const partyVatin = (v.PARTYVATIN ?? v.PARTYGSTIN ?? v.BUYERVATIN ?? v.BUYERGSTIN ?? '')
+      .toString()
+      .trim();
     for (const l of ledgers) {
       const ledgerName = (l.LEDGERNAME ?? '').toString();
       const amount = Math.abs(toNumber(l.AMOUNT));

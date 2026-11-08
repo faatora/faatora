@@ -11,16 +11,24 @@ import {
 import { StripeBilling, type StripeLike } from '../src/modules/billing/firm/stripe-billing';
 import { FirmBillingService } from '../src/modules/billing/firm/billing.service';
 import { BillingWebhookController } from '../src/modules/billing/firm/webhook.controller';
-import type { WebhookEventsService, DispatchResult } from '../src/modules/billing/firm/webhook-events.service';
+import type {
+  WebhookEventsService,
+  DispatchResult,
+} from '../src/modules/billing/firm/webhook-events.service';
 
 // Minimal in-memory mock of the stripe SDK. Only the methods the
 // adapter actually uses are implemented. `webhooks.constructEvent` is
 // configurable so tests can simulate signature pass/fail.
 function makeStripeMock(overrides: Partial<StripeLike> = {}): StripeLike & {
   calls: {
-    customers: { create: Array<{ params: Stripe.CustomerCreateParams; options?: { idempotencyKey?: string } }> };
+    customers: {
+      create: Array<{ params: Stripe.CustomerCreateParams; options?: { idempotencyKey?: string } }>;
+    };
     subscriptions: {
-      create: Array<{ params: Stripe.SubscriptionCreateParams; options?: { idempotencyKey?: string } }>;
+      create: Array<{
+        params: Stripe.SubscriptionCreateParams;
+        options?: { idempotencyKey?: string };
+      }>;
       cancel: string[];
     };
     portal: Array<Stripe.BillingPortal.SessionCreateParams>;
@@ -28,13 +36,25 @@ function makeStripeMock(overrides: Partial<StripeLike> = {}): StripeLike & {
   };
 } {
   const calls = {
-    customers: { create: [] as Array<{ params: Stripe.CustomerCreateParams; options?: { idempotencyKey?: string } }> },
+    customers: {
+      create: [] as Array<{
+        params: Stripe.CustomerCreateParams;
+        options?: { idempotencyKey?: string };
+      }>,
+    },
     subscriptions: {
-      create: [] as Array<{ params: Stripe.SubscriptionCreateParams; options?: { idempotencyKey?: string } }>,
+      create: [] as Array<{
+        params: Stripe.SubscriptionCreateParams;
+        options?: { idempotencyKey?: string };
+      }>,
       cancel: [] as string[],
     },
     portal: [] as Array<Stripe.BillingPortal.SessionCreateParams>,
-    webhookConstruct: [] as Array<{ payload: string | Buffer; sig: string | string[]; secret: string }>,
+    webhookConstruct: [] as Array<{
+      payload: string | Buffer;
+      sig: string | string[];
+      secret: string;
+    }>,
   };
   const base: StripeLike = {
     customers: {
@@ -68,7 +88,9 @@ function makeStripeMock(overrides: Partial<StripeLike> = {}): StripeLike & {
       sessions: {
         async create(params) {
           calls.portal.push(params);
-          return { url: `https://billing.stripe.com/p/session/${params.customer}` } as unknown as Stripe.BillingPortal.Session;
+          return {
+            url: `https://billing.stripe.com/p/session/${params.customer}`,
+          } as unknown as Stripe.BillingPortal.Session;
         },
       },
     },
@@ -100,7 +122,9 @@ describe('StripeBilling adapter', () => {
     expect(got.providerCustomerId).toBe('cus_test_123');
     expect(got.email).toBe('ops@firm.om');
     expect(mock.calls.customers.create).toHaveLength(1);
-    expect(mock.calls.customers.create[0].options?.idempotencyKey).toBe(`firm:${firmId}:create-customer`);
+    expect(mock.calls.customers.create[0].options?.idempotencyKey).toBe(
+      `firm:${firmId}:create-customer`,
+    );
     expect(mock.calls.customers.create[0].params.metadata).toMatchObject({ firm_id: firmId });
   });
 
@@ -119,13 +143,19 @@ describe('StripeBilling adapter', () => {
   it('createSubscription maps timestamps to Date and keeps planId on the port shape', async () => {
     const mock = makeStripeMock();
     const adapter = new StripeBilling({ stripe: mock, webhookSecret: 'whsec_dev' });
-    const got: ProviderSubscription = await adapter.createSubscription('cus_1', 'price_firm_pro_annual', 14);
+    const got: ProviderSubscription = await adapter.createSubscription(
+      'cus_1',
+      'price_firm_pro_annual',
+      14,
+    );
     expect(got.providerSubscriptionId).toBe('sub_test_123');
     expect(got.planId).toBe('price_firm_pro_annual');
     expect(got.status).toBe('trialing');
     expect(got.currentPeriodEnd.getTime()).toBeGreaterThan(got.currentPeriodStart.getTime());
     expect(mock.calls.subscriptions.create[0].params.trial_period_days).toBe(14);
-    expect(mock.calls.subscriptions.create[0].options?.idempotencyKey).toBe('cust:cus_1:sub:price_firm_pro_annual');
+    expect(mock.calls.subscriptions.create[0].options?.idempotencyKey).toBe(
+      'cust:cus_1:sub:price_firm_pro_annual',
+    );
   });
 
   it('cancelSubscription forwards the id', async () => {
@@ -168,7 +198,9 @@ describe('StripeBilling adapter', () => {
   it('verifyWebhook raises BillingSignatureError when webhook secret is missing', () => {
     const mock = makeStripeMock();
     const adapter = new StripeBilling({ stripe: mock, webhookSecret: '' });
-    expect(() => adapter.verifyWebhook(Buffer.from('{}'), 'anything')).toThrow(BillingSignatureError);
+    expect(() => adapter.verifyWebhook(Buffer.from('{}'), 'anything')).toThrow(
+      BillingSignatureError,
+    );
   });
 
   it('fromEnv refuses to boot without STRIPE_SECRET_KEY', () => {
@@ -182,7 +214,10 @@ describe('StripeBilling adapter', () => {
   });
 
   it('fromEnv tolerates a missing webhook secret in dev', () => {
-    const adapter = StripeBilling.fromEnv({ STRIPE_SECRET_KEY: 'sk_test_x', NODE_ENV: 'development' });
+    const adapter = StripeBilling.fromEnv({
+      STRIPE_SECRET_KEY: 'sk_test_x',
+      NODE_ENV: 'development',
+    });
     expect(adapter.name).toBe('stripe');
   });
 });
@@ -273,7 +308,13 @@ describe('FirmBillingService dispatch', () => {
     ];
     for (const type of types) {
       await expect(
-        svc.handle({ provider: 'stripe', providerEventId: `evt_${type}`, type, createdAt: new Date(), data: {} }),
+        svc.handle({
+          provider: 'stripe',
+          providerEventId: `evt_${type}`,
+          type,
+          createdAt: new Date(),
+          data: {},
+        }),
       ).resolves.toBeUndefined();
     }
   });
@@ -336,9 +377,9 @@ describe('BillingWebhookController', () => {
 
   it('400s when the raw body is missing (rawBody misconfigured)', async () => {
     const { controller } = buildController();
-    await expect(
-      controller.handle({} as any, 't=1,v1=x', undefined),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.handle({} as any, 't=1,v1=x', undefined)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it('400s with "invalid signature" when verifyWebhook raises BillingSignatureError', async () => {
@@ -428,9 +469,7 @@ describe('FirmBillingService.onFirmCreated — W2-E wire-up', () => {
         // Capture SET LOCAL app.firm_id = '<uuid>' from withFirm so we
         // can assert the right firm context was set.
         const text = q?.queryChunks
-          ? q.queryChunks
-              .map((c: any) => (typeof c === 'string' ? c : c.value ?? ''))
-              .join('')
+          ? q.queryChunks.map((c: any) => (typeof c === 'string' ? c : (c.value ?? ''))).join('')
           : String(q);
         setConfigs.push(text);
         return { rows: [] };

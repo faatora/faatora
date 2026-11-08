@@ -225,7 +225,9 @@ describe('DashboardPage', () => {
 
   it('shows the error state when the API fails and allows retry', async () => {
     let calls = 0;
-    const flaky: typeof globalThis.fetch = (async (input: Parameters<typeof globalThis.fetch>[0]) => {
+    const flaky: typeof globalThis.fetch = (async (
+      input: Parameters<typeof globalThis.fetch>[0],
+    ) => {
       calls += 1;
       const url = typeof input === 'string' ? input : (input as Request).url;
       if (url.endsWith('/firms/firm-x/dashboard')) {

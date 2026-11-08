@@ -116,10 +116,7 @@ export function ClientListPage(props: ClientListPageProps) {
           </p>
         )}
         {state === 'error' && (
-          <p
-            role="alert"
-            className="text-start text-sm text-rose-800 ps-4 pe-4 py-6"
-          >
+          <p role="alert" className="text-start text-sm text-rose-800 ps-4 pe-4 py-6">
             {t('clients.list.error')}
           </p>
         )}

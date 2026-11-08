@@ -62,7 +62,9 @@ export const importBatches = pgTable(
     rowCountCommitted: integer('row_count_committed').notNull().default(0),
     rowCountSkipped: integer('row_count_skipped').notNull().default(0),
     rowCountErrored: integer('row_count_errored').notNull().default(0),
-    rowHashes: jsonb('row_hashes').notNull().default(sql`'[]'::jsonb`),
+    rowHashes: jsonb('row_hashes')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

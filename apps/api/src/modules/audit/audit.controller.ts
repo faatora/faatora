@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query, Req, UseGuards } from '@nestjs/common';
 import { FirmGuard, type FirmAuthedRequest } from '../../auth/firm.guard';
 import { AuditService, type FirmAuditEvent } from './audit.service';
 

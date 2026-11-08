@@ -33,10 +33,7 @@ import { withFirm } from '../../db/with-firm';
 import { firmClientTenants } from '../../db/schema/firms';
 import { invoices, parties } from '../../db/schema/invoicing';
 import { importBatches } from '../../db/schema/firm-imports';
-import {
-  ColumnMappingService,
-  type ColumnMapping,
-} from './column-mapping.service';
+import { ColumnMappingService, type ColumnMapping } from './column-mapping.service';
 import {
   isImportSourceFormat,
   type ImportSourceFormat,
@@ -112,10 +109,7 @@ function verifyToken(token: string): string | null {
   return diff === 0 ? id : null;
 }
 
-export function computeRowHash(
-  sourceFormat: ImportSourceFormat,
-  row: ParsedImportRow,
-): string {
+export function computeRowHash(sourceFormat: ImportSourceFormat, row: ParsedImportRow): string {
   const payload = [
     sourceFormat,
     row.invoiceNumber,

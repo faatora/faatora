@@ -112,12 +112,7 @@ export async function parseZohoBooksCsv(buffer: Buffer): Promise<RawParseResult>
     invoiceDate: (row['Invoice Date'] ?? '').toString().trim(),
     customerName: (row['Customer Name'] ?? '').toString().trim(),
     customerId: (row['Customer ID'] ?? '').toString().trim(),
-    customerVatin: (
-      row['Customer VATIN'] ??
-      row['Customer Tax ID'] ??
-      row['CustomerTaxID'] ??
-      ''
-    )
+    customerVatin: (row['Customer VATIN'] ?? row['Customer Tax ID'] ?? row['CustomerTaxID'] ?? '')
       .toString()
       .trim(),
     itemName: (row['Item Name'] ?? '').toString().trim(),

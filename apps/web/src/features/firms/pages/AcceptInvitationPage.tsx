@@ -44,9 +44,7 @@ export function AcceptInvitationPage() {
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-start text-xl font-semibold text-slate-900">
-        {t('firms.accept.title')}
-      </h1>
+      <h1 className="text-start text-xl font-semibold text-slate-900">{t('firms.accept.title')}</h1>
 
       {state === 'missing_token' && (
         <div

@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  BrowserRouter,
-  Link,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DirectionProvider } from './components/DirectionProvider';
 import { LanguageToggle } from './components/LanguageToggle';
 import { CheckerPage } from './pages/checker/CheckerPage';

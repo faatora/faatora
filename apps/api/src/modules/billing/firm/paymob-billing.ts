@@ -294,10 +294,7 @@ export class PaymobBilling implements BillingProvider {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
     // Checkout URL defaults to Oman's region host; see Unified Checkout
     // doc for per-region values. Trim trailing slash too.
-    this.checkoutUrl = (opts.checkoutUrl ?? 'https://om.checkout.paymob.com').replace(
-      /\/+$/,
-      '',
-    );
+    this.checkoutUrl = (opts.checkoutUrl ?? 'https://om.checkout.paymob.com').replace(/\/+$/, '');
     this.apiKey = opts.apiKey;
     this.hmacSecret = opts.hmacSecret;
     this.integrationId = opts.integrationId;
@@ -308,8 +305,7 @@ export class PaymobBilling implements BillingProvider {
     // self-serve portal; see docs/research/paymob-uat-integration-plan.md
     // section 3. The firm-console UI owns change-card / change-plan /
     // cancel / invoice-history.
-    this.portalReturnUrl =
-      opts.portalReturnUrl ?? 'https://app.faatora.om/firm/settings/billing';
+    this.portalReturnUrl = opts.portalReturnUrl ?? 'https://app.faatora.om/firm/settings/billing';
   }
 
   /**
@@ -339,9 +335,7 @@ export class PaymobBilling implements BillingProvider {
     const isProd = (env.NODE_ENV ?? 'development') === 'production';
 
     if (!apiKey) {
-      throw new BillingProviderError(
-        'PAYMOB_API_KEY is required when BILLING_PROVIDER=paymob',
-      );
+      throw new BillingProviderError('PAYMOB_API_KEY is required when BILLING_PROVIDER=paymob');
     }
     if (!integrationId) {
       throw new BillingProviderError(
@@ -411,9 +405,7 @@ export class PaymobBilling implements BillingProvider {
       body: { api_key: this.apiKey },
     });
     if (res.status < 200 || res.status >= 300) {
-      throw new BillingProviderError(
-        `paymob auth token request failed: HTTP ${res.status}`,
-      );
+      throw new BillingProviderError(`paymob auth token request failed: HTTP ${res.status}`);
     }
     const body = res.body as PaymobAuthResponse;
     if (!body || typeof body.token !== 'string') {
@@ -601,10 +593,7 @@ export class PaymobBilling implements BillingProvider {
     // personal data here — callers that have real data pass it via
     // options.billingData.
     const defaultBilling: Required<
-      Pick<
-        PaymobBillingData,
-        'first_name' | 'last_name' | 'email' | 'phone_number' | 'country'
-      >
+      Pick<PaymobBillingData, 'first_name' | 'last_name' | 'email' | 'phone_number' | 'country'>
     > = {
       first_name: 'Firm',
       last_name: 'Subscriber',
@@ -615,8 +604,7 @@ export class PaymobBilling implements BillingProvider {
     const billing_data: PaymobBillingData = { ...defaultBilling, ...options.billingData };
 
     const specialReference =
-      options.specialReference ??
-      `${providerCustomerId}:${planId}:${Date.now().toString(36)}`;
+      options.specialReference ?? `${providerCustomerId}:${planId}:${Date.now().toString(36)}`;
 
     const body: Record<string, unknown> = {
       amount: amount_cents,
@@ -665,9 +653,7 @@ export class PaymobBilling implements BillingProvider {
       typeof intent.client_secret !== 'string' ||
       intent.client_secret.length === 0
     ) {
-      throw new BillingProviderError(
-        'paymob intention response missing id or client_secret',
-      );
+      throw new BillingProviderError('paymob intention response missing id or client_secret');
     }
 
     // Unified Checkout URL. The publicKey and clientSecret are opaque
@@ -731,10 +717,7 @@ export class PaymobBilling implements BillingProvider {
    * shape and Stripe depends on it. Paymob-specific checkout minting
    * lives on `createCheckoutSession` instead.
    */
-  async getCustomerPortalUrl(
-    providerCustomerId: string,
-    returnUrl: string,
-  ): Promise<string> {
+  async getCustomerPortalUrl(providerCustomerId: string, returnUrl: string): Promise<string> {
     const base = this.portalReturnUrl;
     const u = new URL(base);
     u.searchParams.set('customer', providerCustomerId);
@@ -774,12 +757,8 @@ export class PaymobBilling implements BillingProvider {
       const msg = err instanceof Error ? err.message : 'invalid JSON body';
       throw new BillingSignatureError(`paymob webhook body is not valid JSON: ${msg}`);
     }
-    const concat = HMAC_FIELD_ORDER
-      .map((f) => normalize(pickField(payload, f)))
-      .join('');
-    const expected = createHmac('sha512', this.hmacSecret)
-      .update(concat, 'utf8')
-      .digest('hex');
+    const concat = HMAC_FIELD_ORDER.map((f) => normalize(pickField(payload, f))).join('');
+    const expected = createHmac('sha512', this.hmacSecret).update(concat, 'utf8').digest('hex');
     const sigLower = signature.toLowerCase();
     // Length check before timingSafeEqual: Node's impl throws on
     // mismatched lengths, which would leak info on an obviously bad
@@ -801,8 +780,7 @@ export class PaymobBilling implements BillingProvider {
       throw new BillingSignatureError('paymob webhook has no transaction id');
     }
     const createdAtRaw = obj.created_at ?? payload.created_at;
-    const createdAt =
-      typeof createdAtRaw === 'string' ? new Date(createdAtRaw) : new Date();
+    const createdAt = typeof createdAtRaw === 'string' ? new Date(createdAtRaw) : new Date();
     return {
       provider: 'paymob',
       providerEventId: eventId,

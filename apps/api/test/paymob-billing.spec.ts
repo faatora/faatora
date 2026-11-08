@@ -42,9 +42,7 @@ function stubDb(): any {
 // Minimal recording mock of the http port. Tests push responses onto
 // `queue`; the adapter pops them in call order. Call history lives on
 // `calls`.
-function makeHttp(
-  responses: Array<{ status: number; body: unknown }>,
-): PaymobHttpClient & {
+function makeHttp(responses: Array<{ status: number; body: unknown }>): PaymobHttpClient & {
   calls: Array<{
     method: string;
     url: string;
@@ -199,9 +197,7 @@ describe('PaymobBilling adapter', () => {
   it('createCustomer wraps auth failures as BillingProviderError', async () => {
     const http = makeHttp([{ status: 401, body: { detail: 'bad api key' } }]);
     const adapter = buildAdapter({ http });
-    await expect(adapter.createCustomer('firm-x', {})).rejects.toBeInstanceOf(
-      BillingProviderError,
-    );
+    await expect(adapter.createCustomer('firm-x', {})).rejects.toBeInstanceOf(BillingProviderError);
   });
 
   it('createSubscription provisions a Paymob plan under Bearer auth and returns its id', async () => {
@@ -233,17 +229,17 @@ describe('PaymobBilling adapter', () => {
   it('createSubscription refuses an off-list frequency', async () => {
     const http = makeHttp([{ status: 200, body: { token: 'tok_auth' } }]);
     const adapter = buildAdapter({ http });
-    await expect(
-      adapter.createSubscription('firm_1', '30000:45'),
-    ).rejects.toThrow(/frequency 45 not in allowed set/);
+    await expect(adapter.createSubscription('firm_1', '30000:45')).rejects.toThrow(
+      /frequency 45 not in allowed set/,
+    );
   });
 
   it('createSubscription refuses a malformed planId', async () => {
     const http = makeHttp([{ status: 200, body: { token: 'tok_auth' } }]);
     const adapter = buildAdapter({ http });
-    await expect(
-      adapter.createSubscription('firm_1', 'not-a-plan'),
-    ).rejects.toThrow(/invalid planId/);
+    await expect(adapter.createSubscription('firm_1', 'not-a-plan')).rejects.toThrow(
+      /invalid planId/,
+    );
   });
 
   it('createSubscription ignores trialDays with a warn (Paymob has no trials)', async () => {
@@ -380,31 +376,31 @@ describe('PaymobBilling adapter', () => {
       { status: 201, body: { id: 'pi_test_abc', intention_order_id: 1, status: 'intended' } },
     ]);
     const adapter = buildAdapter({ http });
-    await expect(
-      adapter.createCheckoutSession('firm_1', '50000:360', 'plan_abc'),
-    ).rejects.toThrow(/missing id or client_secret/);
+    await expect(adapter.createCheckoutSession('firm_1', '50000:360', 'plan_abc')).rejects.toThrow(
+      /missing id or client_secret/,
+    );
   });
 
   it('createCheckoutSession refuses to run without PAYMOB_SECRET_KEY', async () => {
     const adapter = buildAdapter({ secretKey: null });
-    await expect(
-      adapter.createCheckoutSession('firm_1', '50000:360', 'plan_abc'),
-    ).rejects.toThrow(/PAYMOB_SECRET_KEY/);
+    await expect(adapter.createCheckoutSession('firm_1', '50000:360', 'plan_abc')).rejects.toThrow(
+      /PAYMOB_SECRET_KEY/,
+    );
   });
 
   it('createCheckoutSession refuses to run without PAYMOB_PUBLIC_KEY', async () => {
     const adapter = buildAdapter({ publicKey: null });
-    await expect(
-      adapter.createCheckoutSession('firm_1', '50000:360', 'plan_abc'),
-    ).rejects.toThrow(/PAYMOB_PUBLIC_KEY/);
+    await expect(adapter.createCheckoutSession('firm_1', '50000:360', 'plan_abc')).rejects.toThrow(
+      /PAYMOB_PUBLIC_KEY/,
+    );
   });
 
   it('createCheckoutSession rejects malformed planId before hitting the API', async () => {
     const http = makeHttp([]);
     const adapter = buildAdapter({ http });
-    await expect(
-      adapter.createCheckoutSession('firm_1', 'nonsense', 'plan_abc'),
-    ).rejects.toThrow(/invalid planId/);
+    await expect(adapter.createCheckoutSession('firm_1', 'nonsense', 'plan_abc')).rejects.toThrow(
+      /invalid planId/,
+    );
     expect(http.calls).toHaveLength(0);
   });
 
@@ -429,32 +425,32 @@ describe('PaymobBilling adapter', () => {
     // Right length, wrong value: hex string of 128 chars so we hit
     // timingSafeEqual (not the length pre-check).
     const wrong = 'a'.repeat(128);
-    expect(() =>
-      adapter.verifyWebhook(Buffer.from(JSON.stringify(body)), wrong),
-    ).toThrow(BillingSignatureError);
+    expect(() => adapter.verifyWebhook(Buffer.from(JSON.stringify(body)), wrong)).toThrow(
+      BillingSignatureError,
+    );
   });
 
   it('verifyWebhook raises BillingSignatureError on a length-mismatched HMAC', () => {
     const adapter = buildAdapter();
     const { body } = buildPaymobCallback();
-    expect(() =>
-      adapter.verifyWebhook(Buffer.from(JSON.stringify(body)), 'too_short'),
-    ).toThrow(/length mismatch/);
+    expect(() => adapter.verifyWebhook(Buffer.from(JSON.stringify(body)), 'too_short')).toThrow(
+      /length mismatch/,
+    );
   });
 
   it('verifyWebhook raises BillingSignatureError when HMAC secret is unconfigured', () => {
     const adapter = buildAdapter({ hmacSecret: '' });
     const { body, hmac } = buildPaymobCallback();
-    expect(() =>
-      adapter.verifyWebhook(Buffer.from(JSON.stringify(body)), hmac),
-    ).toThrow(/PAYMOB_HMAC_SECRET is not configured/);
+    expect(() => adapter.verifyWebhook(Buffer.from(JSON.stringify(body)), hmac)).toThrow(
+      /PAYMOB_HMAC_SECRET is not configured/,
+    );
   });
 
   it('verifyWebhook raises BillingSignatureError on non-JSON body', () => {
     const adapter = buildAdapter();
-    expect(() =>
-      adapter.verifyWebhook(Buffer.from('not json'), 'a'.repeat(128)),
-    ).toThrow(/not valid JSON/);
+    expect(() => adapter.verifyWebhook(Buffer.from('not json'), 'a'.repeat(128))).toThrow(
+      /not valid JSON/,
+    );
   });
 
   it('verifyWebhook synthesises Stripe-shaped event types from TRANSACTION booleans', () => {
@@ -710,11 +706,7 @@ describe('BillingWebhookController with Paymob adapter', () => {
     const parsed = JSON.parse(JSON.stringify(body));
     parsed.obj.amount_cents = 999999;
     await expect(
-      controller.handle(
-        { rawBody: Buffer.from(JSON.stringify(parsed)) } as any,
-        undefined,
-        hmac,
-      ),
+      controller.handle({ rawBody: Buffer.from(JSON.stringify(parsed)) } as any, undefined, hmac),
     ).rejects.toThrow(/invalid signature/);
   });
 });

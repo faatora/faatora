@@ -11,15 +11,7 @@
  * as), separate from `app.tenant_id` (the tenant whose data is being
  * accessed). See apps/api/src/db/with-firm.ts and with-firm-tenant.ts.
  */
-import {
-  pgTable,
-  uuid,
-  text,
-  timestamp,
-  index,
-  uniqueIndex,
-  check,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenants, users } from './tenancy';
 
@@ -130,7 +122,9 @@ export const firmInvitations = pgTable(
     email: text('email').notNull(),
     role: text('role').notNull(),
     token: text('token').notNull().unique(),
-    invitedByUserId: uuid('invited_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    invitedByUserId: uuid('invited_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     acceptedAt: timestamp('accepted_at', { withTimezone: true }),

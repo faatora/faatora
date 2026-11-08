@@ -61,8 +61,20 @@ describe('ClientListPage', () => {
       const url = typeof input === 'string' ? input : (input as Request).url;
       if (url.endsWith('/firms/firm-1/clients')) {
         return makeResponse(200, [
-          { tenantId: 't1', tenantName: 'Alpha Co', accessLevel: 'full', engagementType: 'ongoing', createdAt: 'x' },
-          { tenantId: 't2', tenantName: 'Beta Co', accessLevel: 'full', engagementType: 'periodic', createdAt: 'x' },
+          {
+            tenantId: 't1',
+            tenantName: 'Alpha Co',
+            accessLevel: 'full',
+            engagementType: 'ongoing',
+            createdAt: 'x',
+          },
+          {
+            tenantId: 't2',
+            tenantName: 'Beta Co',
+            accessLevel: 'full',
+            engagementType: 'periodic',
+            createdAt: 'x',
+          },
         ]);
       }
       return makeResponse(404, {});

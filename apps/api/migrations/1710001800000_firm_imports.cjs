@@ -95,15 +95,9 @@ exports.up = (pgm) => {
 };
 
 exports.down = (pgm) => {
-  pgm.sql(
-    `DROP POLICY IF EXISTS import_batches_firm_select ON import_batches;`,
-  );
-  pgm.sql(
-    `DROP POLICY IF EXISTS import_batches_tenant_isolation ON import_batches;`,
-  );
-  pgm.sql(
-    `DROP POLICY IF EXISTS import_column_mappings_firm_isolation ON import_column_mappings;`,
-  );
+  pgm.sql(`DROP POLICY IF EXISTS import_batches_firm_select ON import_batches;`);
+  pgm.sql(`DROP POLICY IF EXISTS import_batches_tenant_isolation ON import_batches;`);
+  pgm.sql(`DROP POLICY IF EXISTS import_column_mappings_firm_isolation ON import_column_mappings;`);
   pgm.dropTable('import_batches');
   pgm.dropTable('import_column_mappings');
 };

@@ -65,7 +65,10 @@ describe('FirmMembersPage', () => {
     const user = userEvent.setup();
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = typeof input === 'string' ? input : (input as Request).url;
-      if (url.endsWith('/firms/firm-y/members') && (!init || init.method === undefined || init.method === 'GET')) {
+      if (
+        url.endsWith('/firms/firm-y/members') &&
+        (!init || init.method === undefined || init.method === 'GET')
+      ) {
         return makeResponse(200, [
           { userId: 'u1', email: 'owner@ex.com', role: 'owner', status: 'active', self: true },
         ]);
@@ -96,9 +99,7 @@ describe('FirmMembersPage', () => {
     await user.click(screen.getByRole('button', { name: /send invite/i }));
 
     await waitFor(() => {
-      const postCall = fetchSpy.mock.calls.find(
-        (c) => (c[1] as RequestInit)?.method === 'POST',
-      );
+      const postCall = fetchSpy.mock.calls.find((c) => (c[1] as RequestInit)?.method === 'POST');
       expect(postCall).toBeDefined();
       const [, init] = postCall!;
       expect(init?.body).toBe(JSON.stringify({ email: 'new@ex.com', role: 'partner' }));

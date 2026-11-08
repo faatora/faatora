@@ -240,9 +240,9 @@ describe('FirmsService', () => {
     });
 
     it('rejects when the invitation does not exist', async () => {
-      await expect(svc.acceptInvitation('bogus-token-aaaaaaaaaaaaaaaaaaaa', inviteeU)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        svc.acceptInvitation('bogus-token-aaaaaaaaaaaaaaaaaaaa', inviteeU),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('cannot invite an email that is already an active member', async () => {
@@ -268,9 +268,10 @@ describe('FirmsService', () => {
         role: 'staff',
       });
       // Push the expires_at into the past via admin.
-      await admin.query(`UPDATE firm_invitations SET expires_at = now() - interval '1 day' WHERE id=$1`, [
-        invite.id,
-      ]);
+      await admin.query(
+        `UPDATE firm_invitations SET expires_at = now() - interval '1 day' WHERE id=$1`,
+        [invite.id],
+      );
       await expect(svc.acceptInvitation(invite.token, inviteeU)).rejects.toBeInstanceOf(
         ForbiddenException,
       );

@@ -9,11 +9,7 @@
 
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  validateAll,
-  vatReturnCsv,
-  type ValidationPreviewResult,
-} from '../api/clients';
+import { validateAll, vatReturnCsv, type ValidationPreviewResult } from '../api/clients';
 
 export interface BatchOperationsPageProps {
   firmId: string;
@@ -24,9 +20,7 @@ export function BatchOperationsPage(props: BatchOperationsPageProps) {
   return (
     <div className="mx-auto max-w-4xl">
       <header>
-        <h1 className="text-start text-2xl font-bold text-slate-900">
-          {t('ops.title')}
-        </h1>
+        <h1 className="text-start text-2xl font-bold text-slate-900">{t('ops.title')}</h1>
         <p className="mt-1 text-start text-sm text-slate-600">{t('ops.subtitle')}</p>
       </header>
       <ValidateAllSection firmId={props.firmId} />
@@ -61,10 +55,7 @@ function ValidateAllSection({ firmId }: { firmId: string }) {
       aria-labelledby="validate-all-heading"
       className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
     >
-      <h2
-        id="validate-all-heading"
-        className="text-start text-lg font-semibold text-slate-900"
-      >
+      <h2 id="validate-all-heading" className="text-start text-lg font-semibold text-slate-900">
         {t('ops.validateAll.title')}
       </h2>
       <p className="mt-1 text-start text-sm text-slate-600">{t('ops.validateAll.body')}</p>
@@ -169,10 +160,7 @@ function VatReturnSection({ firmId }: { firmId: string }) {
       aria-labelledby="vat-return-heading"
       className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
     >
-      <h2
-        id="vat-return-heading"
-        className="text-start text-lg font-semibold text-slate-900"
-      >
+      <h2 id="vat-return-heading" className="text-start text-lg font-semibold text-slate-900">
         {t('ops.vatReturn.title')}
       </h2>
       <p className="mt-1 text-start text-sm text-slate-600">{t('ops.vatReturn.body')}</p>
@@ -190,9 +178,7 @@ function VatReturnSection({ firmId }: { firmId: string }) {
           />
         </label>
         <label className="block text-start">
-          <span className="text-sm font-medium text-slate-800">
-            {t('ops.vatReturn.periodEnd')}
-          </span>
+          <span className="text-sm font-medium text-slate-800">{t('ops.vatReturn.periodEnd')}</span>
           <input
             type="date"
             value={periodEnd}

@@ -602,9 +602,7 @@ export class FirmsService implements OnModuleDestroy {
       const linkedIds = await tx
         .select({ tenantId: firmClientTenants.tenantId })
         .from(firmClientTenants)
-        .where(
-          and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)),
-        );
+        .where(and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)));
       for (const link of linkedIds) {
         await tx.execute(sql`select set_config('app.tenant_id', ${link.tenantId}, true)`);
         const tRow = await tx

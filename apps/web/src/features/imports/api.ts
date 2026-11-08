@@ -3,12 +3,7 @@
 // set from FirmContext.
 
 import { apiFetch, apiGet, apiPost } from '../../lib/api';
-import type {
-  ColumnMapping,
-  CommitResponse,
-  ImportSourceFormat,
-  PreviewResponse,
-} from './types';
+import type { ColumnMapping, CommitResponse, ImportSourceFormat, PreviewResponse } from './types';
 
 export async function previewImport(
   firmId: string,

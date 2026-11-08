@@ -115,7 +115,9 @@ describe('BatchOperationsPage', () => {
 
     await waitFor(() => {
       const called = fetchSpy.mock.calls.some(([u]) =>
-        String(u).includes('/operations/vat-return.csv?periodStart=2026-03-01&periodEnd=2026-03-31'),
+        String(u).includes(
+          '/operations/vat-return.csv?periodStart=2026-03-01&periodEnd=2026-03-31',
+        ),
       );
       expect(called).toBe(true);
     });

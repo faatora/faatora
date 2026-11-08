@@ -95,7 +95,9 @@ describe('FirmSwitcher', () => {
     await user.click(betaButton);
 
     expect(localStorage.getItem(ACTIVE_FIRM_STORAGE_KEY)).toBe('firm-b');
-    await waitFor(() => expect(screen.getByTestId('loc').textContent).toBe('/firms/firm-b/dashboard'));
+    await waitFor(() =>
+      expect(screen.getByTestId('loc').textContent).toBe('/firms/firm-b/dashboard'),
+    );
   });
 
   it('shows create-firm and accept-invitation entries at the bottom', async () => {

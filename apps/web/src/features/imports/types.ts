@@ -4,10 +4,7 @@
 // apps/api/src/modules/imports/firm-imports.controller.ts.
 
 export type ImportSourceFormat =
-  | 'tally_daybook_csv'
-  | 'tally_sales_register_csv'
-  | 'tally_xml'
-  | 'zoho_books_csv';
+  'tally_daybook_csv' | 'tally_sales_register_csv' | 'tally_xml' | 'zoho_books_csv';
 
 export const IMPORT_SOURCE_FORMATS: ImportSourceFormat[] = [
   'tally_daybook_csv',

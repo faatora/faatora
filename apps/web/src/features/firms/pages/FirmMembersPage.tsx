@@ -140,7 +140,9 @@ export function FirmMembersPage() {
                       <Td className="font-medium text-slate-900">{m.email}</Td>
                       <Td className="text-slate-700">{t(`firms.role.${m.role}`)}</Td>
                       <Td className="text-slate-700">{t(`firms.members.status.${m.status}`)}</Td>
-                      <Td className="text-slate-700">{m.joinedAt ? formatDate(m.joinedAt) : '-'}</Td>
+                      <Td className="text-slate-700">
+                        {m.joinedAt ? formatDate(m.joinedAt) : '-'}
+                      </Td>
                       <Td className="text-end">
                         {allowManage && m.role !== 'owner' && (
                           <button

@@ -21,7 +21,9 @@ export const firmAuditEvents = pgTable(
     tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'set null' }),
     actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
     eventType: text('event_type').notNull(),
-    payload: jsonb('payload').notNull().default(sql`'{}'::jsonb`),
+    payload: jsonb('payload')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
     source: text('source').notNull().default('system'),
   },

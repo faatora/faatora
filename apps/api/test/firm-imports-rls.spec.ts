@@ -38,17 +38,14 @@ describe('Firm Imports — RLS (W2-D)', () => {
 
   beforeAll(async () => {
     admin = new Pool({ connectionString: ADMIN_URL });
-    await admin.query(
-      `INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`,
-      [
-        ownerA,
-        `sub-${ownerA}`,
-        `rls-A-${ownerA}@test`,
-        ownerB,
-        `sub-${ownerB}`,
-        `rls-B-${ownerB}@test`,
-      ],
-    );
+    await admin.query(`INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`, [
+      ownerA,
+      `sub-${ownerA}`,
+      `rls-A-${ownerA}@test`,
+      ownerB,
+      `sub-${ownerB}`,
+      `rls-B-${ownerB}@test`,
+    ]);
     await admin.query(`INSERT INTO tenants (id, name) VALUES ($1,'RLS TA'),($2,'RLS TB')`, [
       tenantA,
       tenantB,
