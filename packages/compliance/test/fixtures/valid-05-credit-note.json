@@ -1,0 +1,36 @@
+{
+  "canonical": {
+    "id": "11111111-1111-1111-1111-000000000005",
+    "type": "credit_note",
+    "number": "CRN-V05-0005",
+    "issueDate": "2026-06-10",
+    "currency": "OMR",
+    "supplier": {
+      "name": "Acme Supplier LLC",
+      "vatin": "OM1100000001",
+      "country": "OM"
+    },
+    "buyer": {
+      "name": "Buyer SAOC",
+      "vatin": "OM1100000002",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "Returned Widget",
+        "quantity": 1,
+        "unitCode": "C62",
+        "unitPrice": 10,
+        "vatCategory": "S",
+        "vatRate": 5
+      }
+    ],
+    "notes": "Credit for return against INV-V01-0001"
+  },
+  "expected": {
+    "ok": true,
+    "errorRules": [],
+    "warningRules": []
+  }
+}

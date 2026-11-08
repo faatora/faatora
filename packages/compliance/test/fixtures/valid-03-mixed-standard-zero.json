@@ -1,0 +1,43 @@
+{
+  "canonical": {
+    "id": "11111111-1111-1111-1111-000000000003",
+    "type": "invoice",
+    "number": "INV-V03-0003",
+    "issueDate": "2026-08-01",
+    "currency": "OMR",
+    "supplier": {
+      "name": "Mixed Supplier LLC",
+      "vatin": "OM1100000011",
+      "country": "OM"
+    },
+    "buyer": {
+      "name": "Mixed Buyer SAOC",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "Standard Widget",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 20,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 2,
+        "description": "Zero-rated Export Item",
+        "quantity": 5,
+        "unitCode": "C62",
+        "unitPrice": 12,
+        "vatCategory": "Z",
+        "vatRate": 0
+      }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "errorRules": [],
+    "warningRules": []
+  }
+}

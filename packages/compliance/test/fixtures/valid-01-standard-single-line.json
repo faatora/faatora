@@ -1,0 +1,41 @@
+{
+  "canonical": {
+    "id": "11111111-1111-1111-1111-000000000001",
+    "type": "invoice",
+    "number": "INV-V01-0001",
+    "issueDate": "2026-10-01",
+    "currency": "OMR",
+    "supplier": {
+      "name": "Acme Supplier LLC",
+      "vatin": "OM1100000001",
+      "country": "OM",
+      "address": {
+        "street": "Al Khuwair St",
+        "city": "Muscat",
+        "postalCode": "112",
+        "countrySubdivision": "OM-MA"
+      }
+    },
+    "buyer": {
+      "name": "Buyer SAOC",
+      "vatin": "OM1100000002",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "Widget",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 10,
+        "vatCategory": "S",
+        "vatRate": 5
+      }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "errorRules": [],
+    "warningRules": []
+  }
+}

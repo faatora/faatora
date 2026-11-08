@@ -1,0 +1,43 @@
+{
+  "canonical": {
+    "id": "11111111-1111-1111-1111-000000000004",
+    "type": "invoice",
+    "number": "INV-V04-0004",
+    "issueDate": "2026-07-20",
+    "currency": "OMR",
+    "supplier": {
+      "name": "Clinic Supplier LLC",
+      "vatin": "OM1100000012",
+      "country": "OM"
+    },
+    "buyer": {
+      "name": "Hospital Buyer",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "Taxable Supply",
+        "quantity": 10,
+        "unitCode": "C62",
+        "unitPrice": 7.5,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 2,
+        "description": "Exempt Healthcare Supply",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 40,
+        "vatCategory": "E",
+        "vatRate": 0
+      }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "errorRules": [],
+    "warningRules": []
+  }
+}

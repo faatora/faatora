@@ -1,0 +1,34 @@
+{
+  "canonical": {
+    "id": "22222222-2222-2222-2222-000000000005",
+    "type": "invoice",
+    "number": "INV-INV05-0005",
+    "issueDate": "2026-10-03",
+    "currency": "OMR",
+    "supplier": {
+      "name": "Supplier LLC",
+      "vatin": "OM1100000001",
+      "country": "OM"
+    },
+    "buyer": {
+      "name": "Buyer SAOC",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "Zero-rated but rate 5 (wrong)",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 15,
+        "vatCategory": "Z",
+        "vatRate": 5
+      }
+    ]
+  },
+  "expected": {
+    "ok": false,
+    "errorRules": ["BR-Z-01"],
+    "warningRules": []
+  }
+}

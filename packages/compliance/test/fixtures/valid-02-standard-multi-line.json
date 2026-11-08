@@ -1,0 +1,53 @@
+{
+  "canonical": {
+    "id": "11111111-1111-1111-1111-000000000002",
+    "type": "invoice",
+    "number": "INV-V02-0002",
+    "issueDate": "2026-09-15",
+    "currency": "OMR",
+    "supplier": {
+      "name": "Acme Supplier LLC",
+      "vatin": "OM1100000001",
+      "country": "OM"
+    },
+    "buyer": {
+      "name": "Buyer SAOC",
+      "vatin": "OM1100000002",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "Widget",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 10,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 2,
+        "description": "Gadget",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 25,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 3,
+        "description": "Service hour",
+        "quantity": 4,
+        "unitCode": "HUR",
+        "unitPrice": 15.5,
+        "vatCategory": "S",
+        "vatRate": 5
+      }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "errorRules": [],
+    "warningRules": []
+  }
+}

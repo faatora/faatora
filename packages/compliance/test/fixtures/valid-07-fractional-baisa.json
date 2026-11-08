@@ -1,0 +1,43 @@
+{
+  "canonical": {
+    "id": "11111111-1111-1111-1111-000000000007",
+    "type": "invoice",
+    "number": "INV-V07-0007",
+    "issueDate": "2026-05-30",
+    "currency": "OMR",
+    "supplier": {
+      "name": "Fractional Supplier LLC",
+      "vatin": "OM1100000013",
+      "country": "OM"
+    },
+    "buyer": {
+      "name": "Fractional Buyer",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "Half-baisa unit",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 0.105,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 2,
+        "description": "Fractional kg",
+        "quantity": 1.5,
+        "unitCode": "KGM",
+        "unitPrice": 7.333,
+        "vatCategory": "S",
+        "vatRate": 5
+      }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "errorRules": [],
+    "warningRules": []
+  }
+}

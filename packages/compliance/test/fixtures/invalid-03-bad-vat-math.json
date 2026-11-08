@@ -1,0 +1,52 @@
+{
+  "_note": "Hand-crafted SemanticInvoice with a deliberately wrong line net (10 × 1 = 10 but stored as 11) and dependent totals also wrong. Triggers OM-VAT-001 and the downstream total-mismatch rules.",
+  "semantic": {
+    "bt1_invoiceNumber": "INV-INV03-0003",
+    "bt2_issueDate": "2026-09-01",
+    "bt3_typeCode": "380",
+    "bt5_currencyCode": "OMR",
+    "bt24_specificationVersion": "2.1",
+    "supplier": {
+      "bt27_name": "Bad Math Supplier LLC",
+      "bt31_vatIdentifier": "OM1100000020",
+      "bt40_countryCode": "OM"
+    },
+    "buyer": {
+      "bt27_name": "Buyer SAOC",
+      "bt40_countryCode": "OM"
+    },
+    "bg25_lines": [
+      {
+        "bt126_lineId": "1",
+        "bt129_quantity": 1,
+        "bt130_unitCode": "C62",
+        "bt131_lineNetAmount": 11,
+        "bt146_itemName": "Mis-stated widget",
+        "bt146_itemNetPrice": 10,
+        "bt152_itemVatCategoryCode": "S",
+        "bt153_itemVatRate": 5
+      }
+    ],
+    "bg23_vatBreakdown": [
+      {
+        "bt116_categoryTaxableAmount": 11,
+        "bt117_categoryTaxAmount": 0.55,
+        "bt118_categoryCode": "S",
+        "bt119_categoryRate": 5
+      }
+    ],
+    "bg22_documentTotals": {
+      "bt106_sumOfLineNetAmounts": 11,
+      "bt109_totalAmountWithoutVat": 11,
+      "bt110_totalVatAmount": 0.55,
+      "bt112_totalAmountWithVat": 11.55,
+      "bt115_amountDueForPayment": 11.55
+    },
+    "_canonicalId": "22222222-2222-2222-2222-000000000003"
+  },
+  "expected": {
+    "ok": false,
+    "errorRules": ["OM-VAT-001"],
+    "warningRules": []
+  }
+}

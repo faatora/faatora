@@ -1,0 +1,250 @@
+{
+  "canonical": {
+    "id": "11111111-1111-1111-1111-000000000008",
+    "type": "invoice",
+    "number": "INV-V08-0008",
+    "issueDate": "2026-04-20",
+    "currency": "OMR",
+    "supplier": {
+      "name": "High Volume Supplier LLC",
+      "vatin": "OM1100000014",
+      "country": "OM"
+    },
+    "buyer": {
+      "name": "High Volume Buyer",
+      "country": "OM"
+    },
+    "lines": [
+      {
+        "lineNo": 1,
+        "description": "HV item 1",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 11,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 2,
+        "description": "HV item 2",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 12,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 3,
+        "description": "HV item 3",
+        "quantity": 4,
+        "unitCode": "C62",
+        "unitPrice": 13,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 4,
+        "description": "HV item 4",
+        "quantity": 5,
+        "unitCode": "C62",
+        "unitPrice": 14,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 5,
+        "description": "HV item 5",
+        "quantity": 1,
+        "unitCode": "C62",
+        "unitPrice": 15,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 6,
+        "description": "HV item 6",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 16,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 7,
+        "description": "HV item 7",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 17,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 8,
+        "description": "HV item 8",
+        "quantity": 4,
+        "unitCode": "C62",
+        "unitPrice": 18,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 9,
+        "description": "HV item 9",
+        "quantity": 5,
+        "unitCode": "C62",
+        "unitPrice": 19,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 10,
+        "description": "HV item 10",
+        "quantity": 1,
+        "unitCode": "C62",
+        "unitPrice": 20,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 11,
+        "description": "HV item 11",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 21,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 12,
+        "description": "HV item 12",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 22,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 13,
+        "description": "HV item 13",
+        "quantity": 4,
+        "unitCode": "C62",
+        "unitPrice": 23,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 14,
+        "description": "HV item 14",
+        "quantity": 5,
+        "unitCode": "C62",
+        "unitPrice": 24,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 15,
+        "description": "HV item 15",
+        "quantity": 1,
+        "unitCode": "C62",
+        "unitPrice": 25,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 16,
+        "description": "HV item 16",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 26,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 17,
+        "description": "HV item 17",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 27,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 18,
+        "description": "HV item 18",
+        "quantity": 4,
+        "unitCode": "C62",
+        "unitPrice": 28,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 19,
+        "description": "HV item 19",
+        "quantity": 5,
+        "unitCode": "C62",
+        "unitPrice": 29,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 20,
+        "description": "HV item 20",
+        "quantity": 1,
+        "unitCode": "C62",
+        "unitPrice": 30,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 21,
+        "description": "HV item 21",
+        "quantity": 2,
+        "unitCode": "C62",
+        "unitPrice": 31,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 22,
+        "description": "HV item 22",
+        "quantity": 3,
+        "unitCode": "C62",
+        "unitPrice": 32,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 23,
+        "description": "HV item 23",
+        "quantity": 4,
+        "unitCode": "C62",
+        "unitPrice": 33,
+        "vatCategory": "Z",
+        "vatRate": 0
+      },
+      {
+        "lineNo": 24,
+        "description": "HV item 24",
+        "quantity": 5,
+        "unitCode": "C62",
+        "unitPrice": 34,
+        "vatCategory": "S",
+        "vatRate": 5
+      },
+      {
+        "lineNo": 25,
+        "description": "HV item 25",
+        "quantity": 1,
+        "unitCode": "C62",
+        "unitPrice": 35,
+        "vatCategory": "Z",
+        "vatRate": 0
+      }
+    ]
+  },
+  "expected": {
+    "ok": true,
+    "errorRules": [],
+    "warningRules": []
+  }
+}

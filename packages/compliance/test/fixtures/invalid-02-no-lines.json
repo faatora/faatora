@@ -1,0 +1,34 @@
+{
+  "_note": "Canonical zod requires >=1 line, so to exercise BR-16 (schematron) we feed the pipeline a semantic invoice directly, bypassing canonical shape validation.",
+  "semantic": {
+    "bt1_invoiceNumber": "INV-INV02-0002",
+    "bt2_issueDate": "2026-10-01",
+    "bt3_typeCode": "380",
+    "bt5_currencyCode": "OMR",
+    "bt24_specificationVersion": "2.1",
+    "supplier": {
+      "bt27_name": "Acme Supplier LLC",
+      "bt31_vatIdentifier": "OM1100000001",
+      "bt40_countryCode": "OM"
+    },
+    "buyer": {
+      "bt27_name": "Buyer SAOC",
+      "bt40_countryCode": "OM"
+    },
+    "bg25_lines": [],
+    "bg23_vatBreakdown": [],
+    "bg22_documentTotals": {
+      "bt106_sumOfLineNetAmounts": 0,
+      "bt109_totalAmountWithoutVat": 0,
+      "bt110_totalVatAmount": 0,
+      "bt112_totalAmountWithVat": 0,
+      "bt115_amountDueForPayment": 0
+    },
+    "_canonicalId": "22222222-2222-2222-2222-000000000002"
+  },
+  "expected": {
+    "ok": false,
+    "errorRules": ["BR-16"],
+    "warningRules": []
+  }
+}
