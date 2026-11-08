@@ -1,36 +1,78 @@
-name: Infra
+name: Infra (plan only)
+
+# Any apply is routed through deploy-staging.yml so a human gate always
+# sits between a code change and real AWS resources. This workflow just
+# runs fmt, validate and plan on PRs that touch infra/** and uploads the
+# plan artifact for review.
+
 on:
   pull_request:
     paths: ['infra/**']
   push:
     branches: [main]
     paths: ['infra/**']
+
 permissions:
   id-token: write
   contents: read
+  pull-requests: write
+
+concurrency:
+  group: infra-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_WORKLOAD_REGION: me-south-1
+  AWS_TF_STATE_REGION: us-east-1
+  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/GitHubActionsDeployRole
+  TF_STATE_BUCKET: fawtara-tfstate
+  TF_LOCK_TABLE: fawtara-tflock
+
 jobs:
   terraform:
+    name: Format, validate, plan
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: infra
+    strategy:
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION || 'me-south-1' }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+
       - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
       - name: Terraform init
         run: |
           terraform init \
-            -backend-config="bucket=fawtara-tfstate" \
-            -backend-config="key=global/terraform.tfstate" \
-            -backend-config="region=${{ vars.TF_STATE_REGION || 'us-east-1' }}" \
-            -backend-config="dynamodb_table=fawtara-tflock"
-      - run: terraform fmt -check
-      - run: terraform validate
-      - run: terraform plan -var="environment=production" -out=tfplan
-      - name: Terraform apply (main only)
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="key=staging/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_TF_STATE_REGION }}" \
+            -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -var environment=staging \
+            -var enable_infra=false \
+            -out=tfplan
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.sha }}
+          path: infra/tfplan
+          retention-days: 7

@@ -1,0 +1,149 @@
+name: PR check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Fast lint, typecheck and tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fawtara
+          POSTGRES_PASSWORD: fawtara
+          POSTGRES_DB: fawtara
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fawtara"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      MIGRATION_DATABASE_URL: postgres://fawtara:fawtara@localhost:5432/fawtara
+      DATABASE_URL: postgres://fawtara_app:fawtara_app@localhost:5432/fawtara
+      NODE_ENV: test
+
+    outputs:
+      api_tests: ${{ steps.counts.outputs.api_tests }}
+      web_tests: ${{ steps.counts.outputs.web_tests }}
+      compliance_tests: ${{ steps.counts.outputs.compliance_tests }}
+      total_tests: ${{ steps.counts.outputs.total_tests }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - name: Resolve pnpm store
+        id: pnpm-store
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck (api)
+        run: pnpm --filter @fawtara/api typecheck
+
+      - name: Typecheck (web)
+        run: pnpm --filter @fawtara/web typecheck
+
+      - name: Migrations (ephemeral postgres)
+        run: pnpm --filter @fawtara/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+
+      - name: Compliance tests
+        id: compliance
+        run: |
+          set +e
+          pnpm --filter @fawtara/compliance test --json --outputFile=compliance-results.json 2>&1 | tee compliance.log
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: API tests
+        id: api
+        run: |
+          set +e
+          pnpm --filter @fawtara/api test --json --outputFile=api-results.json 2>&1 | tee api.log
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Web tests
+        id: web
+        run: |
+          set +e
+          pnpm --filter @fawtara/web test --reporter=verbose 2>&1 | tee web.log
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Count tests
+        id: counts
+        shell: bash
+        run: |
+          # Parse jest JSON when present; grep otherwise. || true on every
+          # line so a parse error does not fail the whole PR.
+          api_tests=$(jq -r '.numTotalTests // 0' packages/compliance/compliance-results.json 2>/dev/null || echo 0)
+          api_tests=$(jq -r '.numTotalTests // 0' apps/api/api-results.json 2>/dev/null || echo 0)
+          web_tests=$(grep -Eo '[0-9]+ passed' apps/web/web.log 2>/dev/null | head -1 | grep -Eo '[0-9]+' || echo 0)
+          compliance_tests=$(jq -r '.numTotalTests // 0' packages/compliance/compliance-results.json 2>/dev/null || echo 0)
+          total=$(( ${api_tests:-0} + ${web_tests:-0} + ${compliance_tests:-0} ))
+          echo "api_tests=$api_tests" >> "$GITHUB_OUTPUT"
+          echo "web_tests=$web_tests" >> "$GITHUB_OUTPUT"
+          echo "compliance_tests=$compliance_tests" >> "$GITHUB_OUTPUT"
+          echo "total_tests=$total" >> "$GITHUB_OUTPUT"
+
+      - name: Fail job if any suite failed
+        run: |
+          [ "${{ steps.compliance.outputs.exit }}" = "0" ] || exit 1
+          [ "${{ steps.api.outputs.exit }}" = "0" ] || exit 1
+          [ "${{ steps.web.outputs.exit }}" = "0" ] || exit 1
+
+  comment:
+    name: Post test count on PR
+    needs: checks
+    if: ${{ always() && github.event.pull_request }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upsert comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Fawtara PR check results:
+
+            - compliance tests: ${{ needs.checks.outputs.compliance_tests }}
+            - api tests: ${{ needs.checks.outputs.api_tests }}
+            - web tests: ${{ needs.checks.outputs.web_tests }}
+            - total: ${{ needs.checks.outputs.total_tests }}
+
+            Full run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          edit-mode: replace

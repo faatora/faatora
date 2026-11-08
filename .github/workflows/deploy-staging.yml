@@ -1,0 +1,211 @@
+name: Deploy (staging)
+
+# Triggered on main merges and manually. Every job that touches staging is
+# pinned to the `staging` GitHub Environment, which the repo owner configures
+# with required reviewers; the apply step therefore waits for a human click
+# even on an automatic main push.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_migrations:
+        description: 'Skip DB migrations (emergency only)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+env:
+  AWS_WORKLOAD_REGION: me-south-1
+  AWS_TF_STATE_REGION: us-east-1
+  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/GitHubActionsDeployRole
+  TF_STATE_BUCKET: fawtara-tfstate
+  TF_LOCK_TABLE: fawtara-tflock
+  ECR_REPOSITORY: fawtara-api
+  ECS_CLUSTER: fawtara-staging
+  ECS_SERVICE: fawtara-api
+
+jobs:
+  migrate:
+    name: Run migrations (staging DB)
+    if: ${{ github.event.inputs.skip_migrations != 'true' }}
+    runs-on: ubuntu-latest
+    environment: staging
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Assume deploy role (workload region)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+
+      # The staging DB URL is held as a GitHub Actions secret because the
+      # host, user and password must not appear in the workflow. The
+      # --no-check-order flag is required because pgmigrations rows for
+      # 1710001200000_firm_billing_webhook_events and
+      # 1710001600000_firm_audit_events were inserted out of filename order
+      # in local dev; node-pg-migrate would otherwise refuse to proceed.
+      - name: Apply migrations
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+        run: pnpm --filter @fawtara/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+
+  terraform-plan:
+    name: Terraform plan
+    needs: migrate
+    if: ${{ always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      plan-artifact: ${{ steps.plan-upload.outputs.artifact-id }}
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="key=staging/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_TF_STATE_REGION }}" \
+            -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -var environment=staging \
+            -var enable_infra=true \
+            -out=tfplan.staging
+
+      - name: Upload plan
+        id: plan-upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-staging-${{ github.sha }}
+          path: infra/tfplan.staging
+          retention-days: 7
+
+  terraform-apply:
+    name: Terraform apply (gated)
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    # Second gate on the same environment. GitHub re-prompts reviewers here,
+    # so a reviewer can see the uploaded plan artifact before clicking
+    # approve.
+    environment: staging
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="key=staging/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_TF_STATE_REGION }}" \
+            -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-staging-${{ github.sha }}
+          path: infra
+
+      - name: Terraform apply
+        run: terraform apply tfplan.staging
+
+  deploy-image:
+    name: Build, push and redeploy API container
+    needs: terraform-apply
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API image
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -f docker/api.Dockerfile \
+            -t "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG" \
+            -t "$REGISTRY/${ECR_REPOSITORY}:staging" \
+            .
+          docker push "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG"
+          docker push "$REGISTRY/${ECR_REPOSITORY}:staging"
+
+      - name: Force new ECS deployment
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_WORKLOAD_REGION"
+
+      - name: Wait for service stable
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_WORKLOAD_REGION"

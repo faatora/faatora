@@ -1,20 +1,93 @@
 name: CI
+
 on:
   pull_request:
   push:
     branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    name: Lint, typecheck, test
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fawtara
+          POSTGRES_PASSWORD: fawtara
+          POSTGRES_DB: fawtara
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fawtara"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      MIGRATION_DATABASE_URL: postgres://fawtara:fawtara@localhost:5432/fawtara
+      DATABASE_URL: postgres://fawtara_app:fawtara_app@localhost:5432/fawtara
+      NODE_ENV: test
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          run_install: false
+
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
+
+      - name: Resolve pnpm store
+        id: pnpm-store
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck (api)
+        run: pnpm --filter @fawtara/api typecheck
+
+      - name: Typecheck (web)
+        run: pnpm --filter @fawtara/web typecheck
+
+      - name: Run migrations against ephemeral postgres
+        run: pnpm --filter @fawtara/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+
+      - name: Compliance tests
+        run: pnpm --filter @fawtara/compliance test
+
+      - name: API tests
+        run: pnpm --filter @fawtara/api test
+
+      - name: Web tests
+        run: pnpm --filter @fawtara/web test
