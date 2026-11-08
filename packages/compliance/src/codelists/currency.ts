@@ -1,5 +1,5 @@
 /**
- * ISO 4217 currency codes supported end-to-end by Fawtara.
+ * ISO 4217 currency codes supported end-to-end by Faatora.
  *
  * The list is intentionally narrow: we start with OMR (home) plus
  * the four cross-border currencies our Omani SMBs invoice in most

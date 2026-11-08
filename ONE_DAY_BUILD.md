@@ -1,4 +1,4 @@
-# Fawtara — one-day build summary
+# Faatora — one-day build summary
 
 Built 2026-10-17 by 20 parallel subagents + 1 integration fixup pass, across four waves on disjoint directory scopes, against a verified-green EP1–EP3 baseline.
 
@@ -8,7 +8,7 @@ Built 2026-10-17 by 20 parallel subagents + 1 integration fixup pass, across fou
 - `pnpm lint` — ESLint + Prettier clean across every file
 - `pnpm typecheck` — all four workspace projects (shared, compliance, web, api)
 - `pnpm db:migrate` — 11 migrations applied cleanly against Postgres 16
-- `pnpm test` — **197 tests pass**: 85 in `@fawtara/compliance`, 112 in `@fawtara/api`
+- `pnpm test` — **197 tests pass**: 85 in `@faatora/compliance`, 112 in `@faatora/api`
 - `pnpm build` — all four projects build
 
 ## What was built

@@ -53,7 +53,7 @@ export interface DrainReport {
  *
  * Design notes on the drain's cross-tenant sweep:
  *   drainOnce() needs to see queued rows across all tenants. The application
- *   DB role (fawtara_app) is subject to RLS and cannot read any row without
+ *   DB role (faatora_app) is subject to RLS and cannot read any row without
  *   app.tenant_id being set. Rather than loop over every tenant (expensive
  *   at scale and racy), we open a short-lived pg Pool using
  *   MIGRATION_DATABASE_URL — the superuser connection the migrations run

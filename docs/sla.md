@@ -1,12 +1,12 @@
-# Fawtara — Service Level Objectives
+# Faatora — Service Level Objectives
 
-These SLOs are the commitments the Fawtara platform makes to its tenants and to the OTA. They are measured against a rolling 30-day window and reviewed monthly.
+These SLOs are the commitments the Faatora platform makes to its tenants and to the OTA. They are measured against a rolling 30-day window and reviewed monthly.
 
 ## Platform availability
 
 **Target: 99.9% monthly availability.**
 
-Availability is measured as the fraction of successful `/health` checks over total `/health` checks per 1-minute bucket, aggregated across all Fawtara API nodes behind the load balancer.
+Availability is measured as the fraction of successful `/health` checks over total `/health` checks per 1-minute bucket, aggregated across all Faatora API nodes behind the load balancer.
 
 - 99.9% monthly ≈ 43 min 50 s of downtime budget per 30-day window.
 - Burn-rate alert at 10x normal fires on `page` to on-call.
@@ -18,7 +18,7 @@ Availability is measured as the fraction of successful `/health` checks over tot
 A clearance submission is counted as **successful** when a `clearance_outbox` row transitions to `delivered` within the retry policy's bounded time. Rejections caused by the tenant's own data (invalid VAT ID, malformed line) are counted toward tenant quality metrics, not against this SLO. Everything else — our bugs, ASP outages beyond the agreed vendor SLA, infra failures — counts.
 
 - 99.95% monthly ≈ 21 min 54 s of eligible failure budget per 30-day window.
-- Measured on `rate(fawtara_clearance_submissions_total{result="delivered"}) / rate(fawtara_clearance_submissions_total)`.
+- Measured on `rate(faatora_clearance_submissions_total{result="delivered"}) / rate(faatora_clearance_submissions_total)`.
 
 ## Clearance submission latency
 
@@ -26,7 +26,7 @@ A clearance submission is counted as **successful** when a `clearance_outbox` ro
 
 End-to-end latency from `/invoices/:id/issue` acknowledgement to a terminal `delivered` state in `clearance_outbox`. "ASP healthy" means the vendor's own SLO page reports green for the window.
 
-- Measured on `histogram_quantile(0.95, fawtara_clearance_latency_seconds_bucket)`.
+- Measured on `histogram_quantile(0.95, faatora_clearance_latency_seconds_bucket)`.
 
 ## Alert MTT-ack and MTT-mitigate
 
@@ -49,15 +49,15 @@ OTA regulatory requirement. Objects are protected by object-lock in compliance m
 
 ## Dashboards (placeholders)
 
-- Platform overview: `https://grafana.fawtara.om/d/platform-overview` *(TBD)*
-- Clearance pipeline: `https://grafana.fawtara.om/d/clearance` *(TBD)*
-- Tenant quality: `https://grafana.fawtara.om/d/tenant-quality` *(TBD)*
-- Signing: `https://grafana.fawtara.om/d/signing` *(TBD)*
+- Platform overview: `https://grafana.faatora.om/d/platform-overview` *(TBD)*
+- Clearance pipeline: `https://grafana.faatora.om/d/clearance` *(TBD)*
+- Tenant quality: `https://grafana.faatora.om/d/tenant-quality` *(TBD)*
+- Signing: `https://grafana.faatora.om/d/signing` *(TBD)*
 
 ## Alert channels (placeholders)
 
-- Page: Opsgenie / PagerDuty via `FAWTARA_ALERT_WEBHOOK`.
-- Chat: `#ops-fawtara` Slack channel for `warn` severities.
+- Page: Opsgenie / PagerDuty via `FAATORA_ALERT_WEBHOOK`.
+- Chat: `#ops-faatora` Slack channel for `warn` severities.
 - Journal: `info` severities route to CloudWatch Logs only.
 
 ---

@@ -1,12 +1,12 @@
 /**
- * Fawtara observability — Prometheus metrics registry (EP1 §obs / A16).
+ * Faatora observability — Prometheus metrics registry (EP1 §obs / A16).
  *
  * One in-process `prom-client` Registry is created on first import and
  * returned by {@link defaultRegistry}. All metric handles below are
  * registered against that singleton so a single `/metrics` scrape sees
  * everything.
  *
- * NAMING. Every metric is prefixed with `fawtara_` and uses the Prometheus
+ * NAMING. Every metric is prefixed with `faatora_` and uses the Prometheus
  * convention of `_total` for counters and `_seconds` for latency
  * histograms. Labels are kept to the minimum cardinality necessary to
  * answer the 3-AM question — `tenant_id` is only on top-level counters
@@ -30,8 +30,8 @@ export const defaultRegistry: Registry = new Registry();
 
 // Default process / event-loop / GC metrics — flipping on prom-client's
 // recommended node_* set. Namespaced by prefix so they don't collide
-// with the fawtara_* families below.
-collectDefaultMetrics({ register: defaultRegistry, prefix: 'fawtara_node_' });
+// with the faatora_* families below.
+collectDefaultMetrics({ register: defaultRegistry, prefix: 'faatora_node_' });
 
 /** Latency buckets shared by request and clearance histograms. */
 const LATENCY_BUCKETS = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
@@ -39,14 +39,14 @@ const LATENCY_BUCKETS = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 // --- HTTP ------------------------------------------------------------------
 
 export const httpRequestsTotal = new Counter({
-  name: 'fawtara_http_requests_total',
+  name: 'faatora_http_requests_total',
   help: 'Total HTTP requests served by the API, labelled by route/method/status/tenant.',
   labelNames: ['method', 'route', 'status_code', 'tenant_id'] as const,
   registers: [defaultRegistry],
 });
 
 export const httpRequestDurationSeconds = new Histogram({
-  name: 'fawtara_http_request_duration_seconds',
+  name: 'faatora_http_request_duration_seconds',
   help: 'HTTP request duration in seconds, labelled by route/method/status.',
   labelNames: ['method', 'route', 'status_code'] as const,
   buckets: LATENCY_BUCKETS,
@@ -56,14 +56,14 @@ export const httpRequestDurationSeconds = new Histogram({
 // --- Invoicing / clearance -------------------------------------------------
 
 export const invoiceIssuedTotal = new Counter({
-  name: 'fawtara_invoice_issued_total',
+  name: 'faatora_invoice_issued_total',
   help: 'Invoices issued by the invoicing pipeline (post-signature).',
   labelNames: ['tenant_id', 'type'] as const,
   registers: [defaultRegistry],
 });
 
 export const clearanceSubmissionsTotal = new Counter({
-  name: 'fawtara_clearance_submissions_total',
+  name: 'faatora_clearance_submissions_total',
   help: 'Clearance submission attempts to the ASP, by terminal result.',
   // result: cleared | rejected | accepted_pending | error
   labelNames: ['tenant_id', 'result'] as const,
@@ -71,7 +71,7 @@ export const clearanceSubmissionsTotal = new Counter({
 });
 
 export const clearanceLatencySeconds = new Histogram({
-  name: 'fawtara_clearance_latency_seconds',
+  name: 'faatora_clearance_latency_seconds',
   help: 'End-to-end clearance submission latency in seconds.',
   labelNames: ['result'] as const,
   buckets: LATENCY_BUCKETS,
@@ -79,33 +79,33 @@ export const clearanceLatencySeconds = new Histogram({
 });
 
 export const clearanceRejectionReasonTotal = new Counter({
-  name: 'fawtara_clearance_rejection_reason_total',
+  name: 'faatora_clearance_rejection_reason_total',
   help: 'Clearance rejections grouped by ASP/OTA reason code.',
   labelNames: ['reason_code'] as const,
   registers: [defaultRegistry],
 });
 
 export const clearanceQueueDepth = new Gauge({
-  name: 'fawtara_clearance_queue_depth',
+  name: 'faatora_clearance_queue_depth',
   help: 'Depth of the clearance_outbox grouped by status.',
   labelNames: ['status'] as const,
   registers: [defaultRegistry],
 });
 
 export const clearanceDlqSize = new Gauge({
-  name: 'fawtara_clearance_dlq_size',
+  name: 'faatora_clearance_dlq_size',
   help: 'Current row count of the clearance_dlq table.',
   registers: [defaultRegistry],
 });
 
 export const canaryLastSuccessTimestamp = new Gauge({
-  name: 'fawtara_canary_last_success_timestamp',
+  name: 'faatora_canary_last_success_timestamp',
   help: 'Unix seconds when the synthetic canary last reported success.',
   registers: [defaultRegistry],
 });
 
 export const signingTotal = new Counter({
-  name: 'fawtara_signing_total',
+  name: 'faatora_signing_total',
   help: 'Invoice signatures produced, by terminal result.',
   labelNames: ['tenant_id', 'result'] as const,
   registers: [defaultRegistry],
@@ -121,36 +121,36 @@ export const signingTotal = new Counter({
 /* -------------------------------------------------------------------------- */
 
 type CounterName =
-  | 'fawtara_http_requests_total'
-  | 'fawtara_invoice_issued_total'
-  | 'fawtara_clearance_submissions_total'
-  | 'fawtara_clearance_rejection_reason_total'
-  | 'fawtara_signing_total';
+  | 'faatora_http_requests_total'
+  | 'faatora_invoice_issued_total'
+  | 'faatora_clearance_submissions_total'
+  | 'faatora_clearance_rejection_reason_total'
+  | 'faatora_signing_total';
 
-type HistogramName = 'fawtara_http_request_duration_seconds' | 'fawtara_clearance_latency_seconds';
+type HistogramName = 'faatora_http_request_duration_seconds' | 'faatora_clearance_latency_seconds';
 
 type GaugeName =
-  | 'fawtara_clearance_queue_depth'
-  | 'fawtara_clearance_dlq_size'
-  | 'fawtara_canary_last_success_timestamp';
+  | 'faatora_clearance_queue_depth'
+  | 'faatora_clearance_dlq_size'
+  | 'faatora_canary_last_success_timestamp';
 
 const counters: Record<CounterName, Counter<string>> = {
-  fawtara_http_requests_total: httpRequestsTotal,
-  fawtara_invoice_issued_total: invoiceIssuedTotal,
-  fawtara_clearance_submissions_total: clearanceSubmissionsTotal,
-  fawtara_clearance_rejection_reason_total: clearanceRejectionReasonTotal,
-  fawtara_signing_total: signingTotal,
+  faatora_http_requests_total: httpRequestsTotal,
+  faatora_invoice_issued_total: invoiceIssuedTotal,
+  faatora_clearance_submissions_total: clearanceSubmissionsTotal,
+  faatora_clearance_rejection_reason_total: clearanceRejectionReasonTotal,
+  faatora_signing_total: signingTotal,
 };
 
 const histograms: Record<HistogramName, Histogram<string>> = {
-  fawtara_http_request_duration_seconds: httpRequestDurationSeconds,
-  fawtara_clearance_latency_seconds: clearanceLatencySeconds,
+  faatora_http_request_duration_seconds: httpRequestDurationSeconds,
+  faatora_clearance_latency_seconds: clearanceLatencySeconds,
 };
 
 const gauges: Record<GaugeName, Gauge<string>> = {
-  fawtara_clearance_queue_depth: clearanceQueueDepth,
-  fawtara_clearance_dlq_size: clearanceDlqSize,
-  fawtara_canary_last_success_timestamp: canaryLastSuccessTimestamp,
+  faatora_clearance_queue_depth: clearanceQueueDepth,
+  faatora_clearance_dlq_size: clearanceDlqSize,
+  faatora_canary_last_success_timestamp: canaryLastSuccessTimestamp,
 };
 
 /** Increment a counter by name. Unknown names throw — this is a code bug. */

@@ -3,7 +3,7 @@
  * firm_memberships, firm_client_tenants) and for the invoice/party
  * SELECT branch added in migration 1710001300000_firm_invoice_rls_branch.
  *
- * All queries here run under the non-BYPASSRLS `fawtara_app` role (via
+ * All queries here run under the non-BYPASSRLS `faatora_app` role (via
  * DATABASE_URL). The admin pool (MIGRATION_DATABASE_URL) is used only
  * for seeding fixtures. If the two URLs point to the same role in a
  * dev setup, the admin-side seeding still works but the app-side

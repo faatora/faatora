@@ -86,7 +86,7 @@ exports.up = (pgm) => {
   // service bypasses RLS by using the migration superuser connection for
   // that one query. Everything else is strictly tenant-scoped.
   for (const tbl of ['clearance_outbox', 'clearance_events', 'clearance_dlq']) {
-    pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ${tbl} TO fawtara_app;`);
+    pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ${tbl} TO faatora_app;`);
     pgm.sql(`ALTER TABLE ${tbl} ENABLE ROW LEVEL SECURITY;`);
     pgm.sql(`ALTER TABLE ${tbl} FORCE ROW LEVEL SECURITY;`);
     pgm.sql(

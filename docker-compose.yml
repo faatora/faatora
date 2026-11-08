@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: fawtara
-      POSTGRES_PASSWORD: fawtara
-      POSTGRES_DB: fawtara
+      POSTGRES_USER: faatora
+      POSTGRES_PASSWORD: faatora
+      POSTGRES_DB: faatora
     ports: ['5432:5432']
     volumes: [pgdata:/var/lib/postgresql/data]
 volumes:

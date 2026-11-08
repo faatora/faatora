@@ -564,7 +564,7 @@ export class FirmsService implements OnModuleDestroy {
   /**
    * Provision a brand-new client tenant AND the firm_client_tenants link
    * in a single transaction. This is the fast-path accountants use when
-   * adding a client that doesn't yet exist in Fawtara.
+   * adding a client that doesn't yet exist in Faatora.
    *
    * Transaction order:
    *   1. SET app.firm_id (so firm_client_tenants INSERT passes RLS)

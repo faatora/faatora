@@ -20,7 +20,7 @@ function baseInvoice(overrides: Partial<CanonicalInvoice> = {}): CanonicalInvoic
     issueDate: '2026-10-17',
     currency: 'OMR',
     supplier: {
-      name: 'Fawtara LLC',
+      name: 'Faatora LLC',
       vatin: 'OM1100000001',
       country: 'OM',
     },

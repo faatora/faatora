@@ -1,16 +1,16 @@
 import QRCode from 'qrcode';
 
 /**
- * QR payload shape for Fawtara signed invoices.
+ * QR payload shape for Faatora signed invoices.
  *
  * The Oman Tax Authority has not yet published a final mandatory QR
- * specification for PINT-OM invoices; this is the Fawtara interim format
+ * specification for PINT-OM invoices; this is the Faatora interim format
  * modelled on the ZATCA v2 TLV approach but kept as compact JSON so it can be
  * extended without a schema migration. All amounts are decimal strings to
  * preserve precision; `v` is the schema version so verifiers can adapt when
  * OTA publishes the final format.
  */
-export interface FawtaraQrPayload {
+export interface FaatoraQrPayload {
   /** Payload schema version; bump when the field set changes. */
   v: number;
   /** Document UUID placed inside the UBL invoice. */
@@ -37,7 +37,7 @@ export function buildQrPayload(input: {
   vatTotal: string | number;
   supplierVatin: string;
   ext?: Record<string, string | number>;
-}): FawtaraQrPayload {
+}): FaatoraQrPayload {
   return {
     v: 1,
     uuid: input.uuid,

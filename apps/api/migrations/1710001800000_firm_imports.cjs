@@ -61,7 +61,7 @@ exports.up = (pgm) => {
 
   // -------- grants --------
   pgm.sql(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON import_column_mappings, import_batches TO fawtara_app;`,
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON import_column_mappings, import_batches TO faatora_app;`,
   );
 
   // -------- RLS on import_column_mappings (firm-keyed) --------

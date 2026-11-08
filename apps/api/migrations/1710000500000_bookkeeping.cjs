@@ -92,7 +92,7 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('payments', ['tenant_id', 'date'], { name: 'payments_tenant_date_idx' });
 
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO faatora_app;`);
   for (const tbl of ['accounts', 'journals', 'journal_lines', 'supplier_bills', 'payments']) {
     pgm.sql(`ALTER TABLE ${tbl} ENABLE ROW LEVEL SECURITY;`);
     pgm.sql(`ALTER TABLE ${tbl} FORCE ROW LEVEL SECURITY;`);

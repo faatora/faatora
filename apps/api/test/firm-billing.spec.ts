@@ -138,9 +138,9 @@ describe('StripeBilling adapter', () => {
   it('getCustomerPortalUrl returns the session url', async () => {
     const mock = makeStripeMock();
     const adapter = new StripeBilling({ stripe: mock, webhookSecret: 'whsec_dev' });
-    const url = await adapter.getCustomerPortalUrl('cus_42', 'https://app.fawtara.om/firm');
+    const url = await adapter.getCustomerPortalUrl('cus_42', 'https://app.faatora.om/firm');
     expect(url).toBe('https://billing.stripe.com/p/session/cus_42');
-    expect(mock.calls.portal[0].return_url).toBe('https://app.fawtara.om/firm');
+    expect(mock.calls.portal[0].return_url).toBe('https://app.faatora.om/firm');
   });
 
   it('verifyWebhook returns a provider-agnostic BillingEvent on valid signature', async () => {

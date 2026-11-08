@@ -22,7 +22,7 @@ interface CartLine {
   vatRate: number;
 }
 
-const PENDING_KEY = 'fawtara_pos_pending';
+const PENDING_KEY = 'faatora_pos_pending';
 const FLUSH_INTERVAL_MS = 15_000;
 
 function money(n: number): string {

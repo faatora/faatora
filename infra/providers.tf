@@ -5,5 +5,5 @@ terraform {
 }
 provider "aws" {
   region = var.aws_region
-  default_tags { tags = { Project = "fawtara", ManagedBy = "terraform" } }
+  default_tags { tags = { Project = "faatora", ManagedBy = "terraform" } }
 }

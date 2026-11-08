@@ -117,7 +117,7 @@ export const firmClientTenants = pgTable(
 /**
  * Pending invitations the firm has sent out. Not in the task's required
  * table list but needed for the inviteMember / acceptInvitation flow,
- * because the invitee may not yet have a Fawtara user row. Tokens are
+ * because the invitee may not yet have a Faatora user row. Tokens are
  * opaque URL-safe strings and are one-shot — accepting or revoking
  * consumes them.
  */

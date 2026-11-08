@@ -29,9 +29,9 @@ env:
   AWS_ROLE_ARN: arn:aws:iam::058264142993:role/GitHubActionsDeployRole
   TF_STATE_BUCKET: fawtara-tfstate
   TF_LOCK_TABLE: fawtara-tflock
-  ECR_REPOSITORY: fawtara-api
-  ECS_CLUSTER: fawtara-staging
-  ECS_SERVICE: fawtara-api
+  ECR_REPOSITORY: faatora-api
+  ECS_CLUSTER: faatora-staging
+  ECS_SERVICE: faatora-api
 
 jobs:
   migrate:
@@ -71,7 +71,7 @@ jobs:
       - name: Apply migrations
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
-        run: pnpm --filter @fawtara/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+        run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
 
   terraform-plan:
     name: Terraform plan

@@ -52,7 +52,7 @@ exports.up = (pgm) => {
   );
 
   pgm.sql(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON firm_audit_events TO fawtara_app;`,
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON firm_audit_events TO faatora_app;`,
   );
 
   pgm.sql(`ALTER TABLE firm_audit_events ENABLE ROW LEVEL SECURITY;`);

@@ -4,7 +4,7 @@
  * RLS is FORCE-enabled on every new table and keyed on
  *   current_setting('app.firm_id', true)::uuid
  * set via the withFirm transaction wrapper. The non-BYPASSRLS application
- * role `fawtara_app` cannot sidestep these policies.
+ * role `faatora_app` cannot sidestep these policies.
  *
  * Design note (ADR-0003 captures the full picture): we chose option (a) —
  * extending the existing invoice / party / invoice_line SELECT policies so
@@ -103,7 +103,7 @@ exports.up = (pgm) => {
 
   // -------- grants --------
   pgm.sql(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON firms, firm_memberships, firm_client_tenants, firm_invitations TO fawtara_app;`,
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON firms, firm_memberships, firm_client_tenants, firm_invitations TO faatora_app;`,
   );
 
   // -------- RLS (FORCE) --------

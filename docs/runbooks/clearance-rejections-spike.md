@@ -4,19 +4,19 @@
 
 ## Symptoms
 
-- `fawtara_clearance_rejection_reason_total` increasing on one or more reason codes.
-- `fawtara_clearance_submissions_total{result="rejected"} / fawtara_clearance_submissions_total` > 1% over 15 minutes (normal baseline is < 0.1%).
+- `faatora_clearance_rejection_reason_total` increasing on one or more reason codes.
+- `faatora_clearance_submissions_total{result="rejected"} / faatora_clearance_submissions_total` > 1% over 15 minutes (normal baseline is < 0.1%).
 - Tickets from a specific tenant with "my invoice was rejected" messages.
 - No corresponding spike in `result="error"` (so the ASP is up — this is a payload / content issue).
 
 ## Detection
 
-- **Alert rule.** `sum(rate(fawtara_clearance_rejection_reason_total[10m])) by (reason_code) > 0.5` and the rate for that code > 10x its 7-day baseline.
+- **Alert rule.** `sum(rate(faatora_clearance_rejection_reason_total[10m])) by (reason_code) > 0.5` and the rate for that code > 10x its 7-day baseline.
 - **Log signal.** Pino lines with `event=clearance.submission.result` and `result=rejected`, grouped by `reason_code`.
 
 ## Immediate mitigation
 
-1. **Identify the dominant `reason_code`.** `topk(5, sum by(reason_code)(increase(fawtara_clearance_rejection_reason_total[15m])))`.
+1. **Identify the dominant `reason_code`.** `topk(5, sum by(reason_code)(increase(faatora_clearance_rejection_reason_total[15m])))`.
 2. **Decide blast radius.**
    - **One tenant, one reason:** likely data quality issue in that tenant's input. Reach out to the tenant through CS; do not change platform config.
    - **Many tenants, one reason:** likely a rule-pack / data-dictionary change on the OTA side. Treat as an incident — see Investigation.

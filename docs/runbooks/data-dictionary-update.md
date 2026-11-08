@@ -4,7 +4,7 @@
 
 ## Context
 
-The OTA periodically publishes a new PINT-OM data dictionary and the associated Schematron rule pack. We track the deployed version in `rule_pack_version` (`/health/detailed` surfaces it). An update changes which fields are mandatory, which codelists are accepted, and which business rules are evaluated. Missing an update by one revision usually results in a wave of `fawtara_clearance_rejection_reason_total` spikes on specific rule IDs the day the OTA flips the switch.
+The OTA periodically publishes a new PINT-OM data dictionary and the associated Schematron rule pack. We track the deployed version in `rule_pack_version` (`/health/detailed` surfaces it). An update changes which fields are mandatory, which codelists are accepted, and which business rules are evaluated. Missing an update by one revision usually results in a wave of `faatora_clearance_rejection_reason_total` spikes on specific rule IDs the day the OTA flips the switch.
 
 ## When to run
 
@@ -38,7 +38,7 @@ Do NOT skip or snapshot-around a corpus failure — the whole point is that it m
 
 1. **Bump `rule_pack_version`** in `packages/compliance/src/pint-om/customisation.ts`.
 2. **Deploy to staging.** Point the clearance gateway at the OTA sandbox. Run a smoke suite of 10 invoices from the golden corpus against the sandbox — all must come back `cleared`.
-3. **Canary.** Deploy to 5% of API capacity in prod. Watch `fawtara_clearance_rejection_reason_total` by `reason_code` for 1 hour.
+3. **Canary.** Deploy to 5% of API capacity in prod. Watch `faatora_clearance_rejection_reason_total` by `reason_code` for 1 hour.
 4. **Full rollout** if canary is clean.
 
 ## Monitor rejection rates

@@ -21,13 +21,13 @@ variable "db_sg_id" {
 variable "db_name" {
   type        = string
   description = "Initial database name."
-  default     = "fawtara"
+  default     = "faatora"
 }
 
 variable "master_username" {
   type        = string
   description = "Master username for the DB."
-  default     = "fawtara_admin"
+  default     = "faatora_admin"
 }
 
 variable "instance_class" {

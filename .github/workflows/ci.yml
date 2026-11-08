@@ -25,19 +25,19 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: fawtara
-          POSTGRES_PASSWORD: fawtara
-          POSTGRES_DB: fawtara
+          POSTGRES_USER: faatora
+          POSTGRES_PASSWORD: faatora
+          POSTGRES_DB: faatora
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U fawtara"
+          --health-cmd "pg_isready -U faatora"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
 
     env:
-      MIGRATION_DATABASE_URL: postgres://fawtara:fawtara@localhost:5432/fawtara
-      DATABASE_URL: postgres://fawtara_app:fawtara_app@localhost:5432/fawtara
+      MIGRATION_DATABASE_URL: postgres://faatora:faatora@localhost:5432/faatora
+      DATABASE_URL: postgres://faatora_app:faatora_app@localhost:5432/faatora
       NODE_ENV: test
 
     steps:
@@ -75,19 +75,19 @@ jobs:
         run: pnpm lint
 
       - name: Typecheck (api)
-        run: pnpm --filter @fawtara/api typecheck
+        run: pnpm --filter @faatora/api typecheck
 
       - name: Typecheck (web)
-        run: pnpm --filter @fawtara/web typecheck
+        run: pnpm --filter @faatora/web typecheck
 
       - name: Run migrations against ephemeral postgres
-        run: pnpm --filter @fawtara/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+        run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
 
       - name: Compliance tests
-        run: pnpm --filter @fawtara/compliance test
+        run: pnpm --filter @faatora/compliance test
 
       - name: API tests
-        run: pnpm --filter @fawtara/api test
+        run: pnpm --filter @faatora/api test
 
       - name: Web tests
-        run: pnpm --filter @fawtara/web test
+        run: pnpm --filter @faatora/web test

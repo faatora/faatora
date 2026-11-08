@@ -5,7 +5,7 @@ if (!URL) {
   process.exit(1);
 }
 const sub = process.env.COGNITO_SUB || process.argv[2];
-const email = process.env.USER_EMAIL || process.argv[3] || `${sub}@fawtara.local`;
+const email = process.env.USER_EMAIL || process.argv[3] || `${sub}@faatora.local`;
 const tenantName = process.env.TENANT_NAME || 'Demo Co';
 const role = process.env.ROLE || 'owner';
 if (!sub) {

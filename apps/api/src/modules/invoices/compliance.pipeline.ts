@@ -1,6 +1,6 @@
 /**
  * PipelineComplianceValidator — the NestJS adapter around
- * `@fawtara/compliance`'s validation pipeline.
+ * `@faatora/compliance`'s validation pipeline.
  *
  * The invoices service calls `.validate({ invoice, lines, totals })`
  * with Drizzle row shapes. We translate that into a `CanonicalInvoice`,
@@ -27,7 +27,7 @@ import {
   type CanonicalInvoice,
   type InvoiceType,
   type VatCategory,
-} from '@fawtara/compliance';
+} from '@faatora/compliance';
 import type { ComplianceResult, ComplianceValidator } from './compliance.port';
 
 type InvoiceRow = {

@@ -35,8 +35,8 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('import_errors', 'job_id', { name: 'import_errors_job_idx' });
 
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON import_jobs TO fawtara_app;`);
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON import_errors TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON import_jobs TO faatora_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON import_errors TO faatora_app;`);
   for (const tbl of ['import_jobs', 'import_errors']) {
     pgm.sql(`ALTER TABLE ${tbl} ENABLE ROW LEVEL SECURITY;`);
     pgm.sql(`ALTER TABLE ${tbl} FORCE ROW LEVEL SECURITY;`);

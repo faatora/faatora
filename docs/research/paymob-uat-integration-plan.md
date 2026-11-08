@@ -1,4 +1,4 @@
-# Paymob UAT Integration Plan for Fawtara (Firm-Console Billing)
+# Paymob UAT Integration Plan for Faatora (Firm-Console Billing)
 
 Status: research draft. Author: billing-adapter agent. Date: 2026-11-08.
 Primary sources below are all Paymob official pages
@@ -15,14 +15,14 @@ Ahmed from the Paymob sandbox or a sales call.
   `oman.paymob.com` with the National Bank of Oman as the acquiring and
   settlement partner. A direct-contract path for an Omani LLC is
   plausible but is NOT publicly documented. Ahmed must confirm this with
-  Paymob commercial before Fawtara commits.
+  Paymob commercial before Faatora commits.
 - The subscription primitive exists (`Create Subscription Plan` under
   developers.paymob.com) but the endpoint requires a "MIGS Moto
   integration ID", an acquirer-side artefact that is Egypt-oriented and
   is NOT publicly documented as available for Oman merchants. Treat
   Paymob Subscriptions as unverified-in-Oman until sandbox confirms.
 - There is no hosted self-serve customer portal. Stripe's Customer
-  Portal has no Paymob equivalent. Fawtara must build the
+  Portal has no Paymob equivalent. Faatora must build the
   change-card, change-plan, cancel, invoice-history UI in-app. Rough
   cost: 2 to 3 engineer-weeks.
 - Webhooks are signed with HMAC-SHA512 over 20 specified callback
@@ -71,7 +71,7 @@ What this adds up to:
   but does not list the specific documents.
 
 **Unverified items that Ahmed must confirm with Paymob sales before
-Fawtara commits:**
+Faatora commits:**
 
 - Whether Modern Venture Shelter LLC in Muscat, as a standard Omani
   LLC (not free-zone, not UAE subsidiary) can sign the Paymob merchant
@@ -88,7 +88,7 @@ Fawtara commits:**
 - Settlement currency. OMR is confirmed as the processing currency in
   the Oman Intention API examples. Settlement should match but this
   must be confirmed.
-- CR of the Paymob local legal entity in Oman, for Fawtara's
+- CR of the Paymob local legal entity in Oman, for Faatora's
   counterparty-risk file.
 
 Primary recommendation: Ahmed emails commercial@paymob.com or uses the
@@ -139,7 +139,7 @@ Gaps versus Stripe Billing:
   entirely possible the Subscriptions API works in Oman but requires a
   dedicated integration ID that Paymob provisions by request. It is
   also possible the API does not work in Oman at all. Must be verified
-  in sandbox before Fawtara picks Paymob as primary.
+  in sandbox before Faatora picks Paymob as primary.
 - No prorations on plan change. No credit notes. No invoice object
   that mirrors Stripe's `invoice.finalized` flow for the firm's
   bookkeeping.
@@ -149,7 +149,7 @@ Gaps versus Stripe Billing:
 
 ### 2.2 Tokenized card plus server-side scheduler (fallback)
 
-If the Subscriptions API cannot be used in Oman, Fawtara can emulate
+If the Subscriptions API cannot be used in Oman, Faatora can emulate
 subscriptions using saved card tokens plus a server-side cron.
 
 Flow documented at
@@ -160,7 +160,7 @@ and
 1. Customer completes a first 3DS card transaction via the Intention
    API. Paymob returns a card token to the merchant webhook.
 2. Store token on the `firms` row.
-3. Each billing period, Fawtara's cron creates a new Intention with
+3. Each billing period, Faatora's cron creates a new Intention with
    the stored token in the `card_tokens` array and triggers a
    merchant-initiated transaction.
 
@@ -181,11 +181,11 @@ Gotchas confirmed in the docs:
   Confirms that a Paymob-side provisioning step is required beyond the
   default merchant onboarding.
 
-Building Fawtara's own scheduler is the more defensible path for UAT
+Building Faatora's own scheduler is the more defensible path for UAT
 because it does not depend on Paymob's unverified Subscriptions API
-and because Fawtara already runs a NestJS `@nestjs/schedule` worker
+and because Faatora already runs a NestJS `@nestjs/schedule` worker
 for other close-of-day jobs. Dunning (retry on soft decline), proration
-on plan change, and invoice generation would all become Fawtara's
+on plan change, and invoice generation would all become Faatora's
 responsibility.
 
 ### 2.3 Payment Links (not viable for subscriptions)
@@ -204,7 +204,7 @@ Paymob offers: a flat "charge this amount every N days" primitive plus
 MIGS-style tokenization that is probably Egypt-only. For an OMR 300 to
 500 per seat per year subscription where the firm pays annually in one
 charge, the simpler primitive is enough, but every ancillary feature
-(portal, invoice history, dunning) becomes Fawtara's engineering cost.
+(portal, invoice history, dunning) becomes Faatora's engineering cost.
 
 ## 3. Self-serve customer portal
 
@@ -215,12 +215,12 @@ confirmed by absence; by comparison, Stripe's Customer Portal, Paddle's
 Retain, and Recurly's Customer Portal all have dedicated top-level
 documentation.
 
-Consequence for Fawtara:
+Consequence for Faatora:
 
 - Firms cannot change a card, upgrade or downgrade a plan, cancel, or
-  view invoice history without a Fawtara-built UI.
+  view invoice history without a Faatora-built UI.
 - The `getCustomerPortalUrl` method on the `BillingProvider` interface
-  returns a Fawtara-hosted route under `/firm/settings/billing` for
+  returns a Faatora-hosted route under `/firm/settings/billing` for
   Paymob. That URL is what the Paymob adapter yields in
   `getCustomerPortalUrl`.
 - Engineering cost estimate: 2 to 3 engineer-weeks for a basic portal
@@ -266,7 +266,7 @@ From the Paymob docs:
   [Payment Methods](https://developers.paymob.com/paymob-docs/payments-and-features/payment-methods)
   index.
 - **Local Oman wallets**: None are listed. mPay (Bank Muscat wallet),
-  OmanPay, and the Thawani wallet are not integrated. Fawtara's Thawani
+  OmanPay, and the Thawani wallet are not integrated. Faatora's Thawani
   path, which has its own module, remains the correct choice for any
   wallet-based SME flow.
 - **Apple Pay**: Listed as all-region, gated on merchant-side
@@ -316,7 +316,7 @@ Documented at
 - Booleans serialize as JavaScript lowercase `true` / `false`.
 - Rotate the secret in Dashboard Settings > Account Info > HMAC.
 
-Consequence for Fawtara's existing webhook controller:
+Consequence for Faatora's existing webhook controller:
 
 - The Stripe controller reads a `stripe-signature` header. The Paymob
   controller must also read the `hmac` query parameter. The simplest
@@ -348,7 +348,7 @@ service, so the switch stays legible. Mapping:
 
 - iOS, Android, Flutter, React Native SDKs exist.
 - No official Node.js SDK. Community PHP and Elixir packages exist but
-  are not a basis for a NestJS adapter. Fawtara's adapter calls Paymob
+  are not a basis for a NestJS adapter. Faatora's adapter calls Paymob
   over `fetch` directly, matching the pattern the Stripe adapter uses
   (a narrow `PaymobHttpClient`-style port that tests mock).
 
@@ -361,11 +361,11 @@ Stripe adapter's `maxNetworkRetries` posture.
 ## 7. PCI scope
 
 - Unified Checkout (Paymob-hosted, full page redirect): SAQ A. Card
-  data never touches Fawtara's servers or browser.
+  data never touches Faatora's servers or browser.
 - Pixel component (embedded iframe): SAQ A-EP. The iframe is served by
-  Paymob and the card inputs are isolated from Fawtara's DOM, but the
+  Paymob and the card inputs are isolated from Faatora's DOM, but the
   parent page must be in scope.
-- Direct Card API: SAQ D. Not applicable here because Fawtara will not
+- Direct Card API: SAQ D. Not applicable here because Faatora will not
   collect raw card data.
 
 Firm-console UAT uses Unified Checkout. PCI scope stays at SAQ A, same
@@ -385,11 +385,11 @@ Ahmed-side steps, in order:
    - Public Key (`pk_test_...` for sandbox)
 3. Settings > Payment Integrations: note the Integration ID for `card`
    and for `omannet`. Open each and set:
-   - Webhook URL: `https://uat.fawtara.om/api/billing/webhook`
-   - Redirect URL: `https://uat.fawtara.om/firm/billing/return`
+   - Webhook URL: `https://uat.faatora.om/api/billing/webhook`
+   - Redirect URL: `https://uat.faatora.om/firm/billing/return`
 4. Copy the HMAC secret from Settings > Account Info > HMAC.
 5. Separately request a "subscription" or "card-on-file" integration
-   ID if Fawtara intends to try the Subscriptions API or saved-token
+   ID if Faatora intends to try the Subscriptions API or saved-token
    recurring. Contact Paymob technical support with the merchant
    account name and ask for the MOTO or MIGS Moto integration ID
    provisioned on the Oman tenant.
@@ -410,7 +410,7 @@ in the dashboard that is comparable to Stripe's CLI. The practical way
 to trigger a webhook is to run a sandbox transaction through the
 Unified Checkout and let it POST back. For replay-safety and
 idempotency testing, the webhook can be hand-crafted and `curl`'d at
-Fawtara's endpoint with a computed HMAC query parameter; the unit
+Faatora's endpoint with a computed HMAC query parameter; the unit
 tests scaffolded in this work use exactly this approach.
 
 ## 9. Recommendation
@@ -422,7 +422,7 @@ Specifically:
 
 - Ship the Stripe adapter to UAT behind the Meydan or IFZA entity.
   This path is known-good, has a Customer Portal, has 19 passing
-  tests in the repo today, and is the only path that lets Fawtara
+  tests in the repo today, and is the only path that lets Faatora
   demonstrate firm-console subscription billing to prospective
   accountant-firm customers on the current timeline.
 - Scaffold the Paymob adapter in parallel (this deliverable). Keep it
@@ -438,12 +438,12 @@ Specifically:
      the Oman tenant? If so, what is the integration ID type and how
      is it provisioned?
 - If both answers are yes, flip the switch on the next deployment.
-  Fawtara retains the Oman operating entity for accountant-firm
+  Faatora retains the Oman operating entity for accountant-firm
   billing. No UAE second-entity cost (AED 12-20k per year, 2 to 4
   weeks setup) is incurred. Stripe stays dormant behind the flag for
   international accountants if and when they show up.
 - If answer 1 is no, Paymob is dead and Stripe wins by default.
-- If answer 1 is yes but answer 2 is no, Fawtara picks Paymob only if
+- If answer 1 is yes but answer 2 is no, Faatora picks Paymob only if
   it is willing to pay 2 to 3 engineer-weeks to build a server-side
   recurring scheduler plus the entire self-serve portal. For an
   Oman-only OMR 300 to 500 per seat per year product, that is

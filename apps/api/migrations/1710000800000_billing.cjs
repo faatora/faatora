@@ -102,11 +102,11 @@ exports.up = (pgm) => {
   });
 
   // Grants
-  pgm.sql(`GRANT SELECT ON plans TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT ON plans TO faatora_app;`);
   pgm.sql(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON subscriptions, usage_meters, billing_invoices TO fawtara_app;`,
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON subscriptions, usage_meters, billing_invoices TO faatora_app;`,
   );
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE ON reseller_commissions TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE ON reseller_commissions TO faatora_app;`);
 
   // RLS on tenant-scoped tables
   for (const tbl of ['subscriptions', 'usage_meters', 'billing_invoices']) {

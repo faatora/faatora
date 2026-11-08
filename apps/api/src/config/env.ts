@@ -54,7 +54,7 @@ const envSchema = z.object({
   // hosts are documented in the Unified Checkout docs). Override
   // when staging against another region.
   PAYMOB_CHECKOUT_URL: z.string().url().optional(),
-  // Fawtara-hosted customer portal route; Paymob has no hosted portal
+  // Faatora-hosted customer portal route; Paymob has no hosted portal
   // (see research doc section 3).
   PAYMOB_PORTAL_RETURN_URL: z.string().url().optional(),
   // SEC-002 note: `NODE_ENV=production` plus a configured KMS implementation

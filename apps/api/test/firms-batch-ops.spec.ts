@@ -24,7 +24,7 @@ const ADMIN_URL = (process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_UR
 
 /**
  * Stub validator that fails specific invoice IDs. Keeps the test
- * independent of @fawtara/compliance's rule set -- we only care that
+ * independent of @faatora/compliance's rule set -- we only care that
  * BatchOperationsService correctly routes each invoice through the
  * validator and aggregates the pass/fail counts.
  */

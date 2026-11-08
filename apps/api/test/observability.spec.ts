@@ -44,9 +44,9 @@ describe('Observability — metrics endpoint', () => {
     await app.close();
   });
 
-  it('returns 200 text/plain with fawtara_http_requests_total after a request has been served', async () => {
+  it('returns 200 text/plain with faatora_http_requests_total after a request has been served', async () => {
     // Fabricate at least one observed request so the series exists.
-    incCounter('fawtara_http_requests_total', {
+    incCounter('faatora_http_requests_total', {
       method: 'GET',
       route: '/metrics',
       status_code: '200',
@@ -56,9 +56,9 @@ describe('Observability — metrics endpoint', () => {
     const res = await request(app.getHttpServer()).get('/metrics');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/plain/);
-    expect(res.text).toContain('fawtara_http_requests_total');
+    expect(res.text).toContain('faatora_http_requests_total');
     // Prometheus exposition format carries metric type comments
-    expect(res.text).toMatch(/# TYPE fawtara_http_requests_total counter/);
+    expect(res.text).toMatch(/# TYPE faatora_http_requests_total counter/);
   });
 });
 
@@ -83,8 +83,8 @@ describe('Observability — metrics helpers', () => {
           v.labels.tenant_id === 't1',
       )?.value ?? 0;
 
-    incCounter('fawtara_http_requests_total', labels);
-    incCounter('fawtara_http_requests_total', labels, 4);
+    incCounter('faatora_http_requests_total', labels);
+    incCounter('faatora_http_requests_total', labels, 4);
 
     const after = await httpRequestsTotal.get();
     const afterVal = after.values.find(
@@ -95,29 +95,29 @@ describe('Observability — metrics helpers', () => {
     expect(afterVal).toBe(beforeVal + 5);
   });
 
-  it('observeHistogram records a sample on fawtara_http_request_duration_seconds', async () => {
+  it('observeHistogram records a sample on faatora_http_request_duration_seconds', async () => {
     observeHistogram(
-      'fawtara_http_request_duration_seconds',
+      'faatora_http_request_duration_seconds',
       { method: 'GET', route: '/health', status_code: '200' },
       0.123,
     );
     const text = await defaultRegistry.metrics();
-    expect(text).toContain('fawtara_http_request_duration_seconds_count');
+    expect(text).toContain('faatora_http_request_duration_seconds_count');
     expect(text).toMatch(
-      /fawtara_http_request_duration_seconds_sum\{[^}]*route="\/health"[^}]*\} 0\.123/,
+      /faatora_http_request_duration_seconds_sum\{[^}]*route="\/health"[^}]*\} 0\.123/,
     );
   });
 
-  it('setGauge updates fawtara_canary_last_success_timestamp', async () => {
+  it('setGauge updates faatora_canary_last_success_timestamp', async () => {
     const now = Math.floor(Date.now() / 1000);
-    setGauge('fawtara_canary_last_success_timestamp', {}, now);
+    setGauge('faatora_canary_last_success_timestamp', {}, now);
     const text = await defaultRegistry.metrics();
-    expect(text).toContain(`fawtara_canary_last_success_timestamp ${now}`);
+    expect(text).toContain(`faatora_canary_last_success_timestamp ${now}`);
   });
 
   it('throws on unknown metric names (typo guard)', () => {
     expect(() =>
-      incCounter('does_not_exist' as unknown as 'fawtara_http_requests_total', {}),
+      incCounter('does_not_exist' as unknown as 'faatora_http_requests_total', {}),
     ).toThrow(/unknown counter/);
   });
 });
@@ -154,10 +154,10 @@ describe('Observability — HttpMetricsMiddleware', () => {
 
     const text = await defaultRegistry.metrics();
     expect(text).toContain(
-      'fawtara_http_requests_total{method="GET",route="/anything",status_code="204",tenant_id="t-metrics"} 1',
+      'faatora_http_requests_total{method="GET",route="/anything",status_code="204",tenant_id="t-metrics"} 1',
     );
     expect(text).toContain(
-      'fawtara_http_request_duration_seconds_count{method="GET",route="/anything",status_code="204"} 1',
+      'faatora_http_request_duration_seconds_count{method="GET",route="/anything",status_code="204"} 1',
     );
   });
 
@@ -200,7 +200,7 @@ describe('Observability — CanaryService', () => {
     return { sent, sink };
   }
 
-  it('stamps fawtara_canary_last_success_timestamp after a successful pass', async () => {
+  it('stamps faatora_canary_last_success_timestamp after a successful pass', async () => {
     const { sink } = fakeSink();
     const svc = new CanaryService(fakeDb(), sink);
     const before = Math.floor(Date.now() / 1000) - 1;
@@ -208,7 +208,7 @@ describe('Observability — CanaryService', () => {
     expect(result.ok).toBe(true);
 
     const text = await defaultRegistry.metrics();
-    const match = text.match(/fawtara_canary_last_success_timestamp (\d+(?:\.\d+)?)/);
+    const match = text.match(/faatora_canary_last_success_timestamp (\d+(?:\.\d+)?)/);
     expect(match).toBeTruthy();
     const stamped = Number(match![1]);
     expect(stamped).toBeGreaterThanOrEqual(before);
@@ -229,7 +229,7 @@ describe('Observability — CanaryService', () => {
     expect((sent[0] as { severity: string }).severity).toBe('page');
   });
 
-  it('skips the compliance layer when @fawtara/compliance is not importable', async () => {
+  it('skips the compliance layer when @faatora/compliance is not importable', async () => {
     // We can't easily make the import fail here (the package IS linked
     // in the workspace), so instead we assert the happy path still ends
     // with ok=true. The import-miss log path is covered by the type and
@@ -292,10 +292,10 @@ describe('Observability — QueueDepthSamplerService', () => {
     (svc as unknown as { pool: unknown }).pool = pool;
     await svc.runSample();
     const text = await defaultRegistry.metrics();
-    expect(text).toContain('fawtara_clearance_queue_depth{status="queued"} 3');
-    expect(text).toContain('fawtara_clearance_queue_depth{status="in_flight"} 1');
-    expect(text).toContain('fawtara_clearance_queue_depth{status="delivered"} 0');
-    expect(text).toContain('fawtara_clearance_dlq_size 2');
+    expect(text).toContain('faatora_clearance_queue_depth{status="queued"} 3');
+    expect(text).toContain('faatora_clearance_queue_depth{status="in_flight"} 1');
+    expect(text).toContain('faatora_clearance_queue_depth{status="delivered"} 0');
+    expect(text).toContain('faatora_clearance_dlq_size 2');
   });
 });
 

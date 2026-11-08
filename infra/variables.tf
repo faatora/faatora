@@ -9,7 +9,7 @@ variable "environment" {
 
 variable "project" {
   type    = string
-  default = "fawtara"
+  default = "faatora"
 }
 
 variable "enable_infra" {

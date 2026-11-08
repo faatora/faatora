@@ -273,17 +273,17 @@ describe('PaymobBilling adapter', () => {
     expect(cancelCall.body).toEqual({ is_active: false });
   });
 
-  it('getCustomerPortalUrl returns a Fawtara-hosted route (Paymob has no portal)', async () => {
+  it('getCustomerPortalUrl returns a Faatora-hosted route (Paymob has no portal)', async () => {
     const adapter = buildAdapter();
     const url = await adapter.getCustomerPortalUrl(
       'firm_abc',
-      'https://app.fawtara.om/firm/dashboard',
+      'https://app.faatora.om/firm/dashboard',
     );
     const parsed = new URL(url);
-    expect(parsed.host).toBe('app.fawtara.om');
+    expect(parsed.host).toBe('app.faatora.om');
     expect(parsed.pathname).toBe('/firm/settings/billing');
     expect(parsed.searchParams.get('customer')).toBe('firm_abc');
-    expect(parsed.searchParams.get('return')).toBe('https://app.fawtara.om/firm/dashboard');
+    expect(parsed.searchParams.get('return')).toBe('https://app.faatora.om/firm/dashboard');
   });
 
   // ---------------------------------------------------------------

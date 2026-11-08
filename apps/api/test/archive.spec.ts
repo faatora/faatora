@@ -72,8 +72,8 @@ describe('Archive', () => {
   }
 
   beforeAll(async () => {
-    archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fawtara-archive-test-'));
-    process.env.FAWTARA_ARCHIVE_DIR = archiveDir;
+    archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), 'faatora-archive-test-'));
+    process.env.FAATORA_ARCHIVE_DIR = archiveDir;
     storage = new FilesystemStorage();
 
     admin = new Pool({ connectionString: ADMIN_URL });

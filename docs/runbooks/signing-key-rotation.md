@@ -11,9 +11,9 @@
 
 1. Confirm the **new key** is already generated in the HSM/KMS region and reachable from the API's role. For local dev the equivalent is a new PEM in `apps/api/.env` under `SIGNING_PRIVATE_KEY_V2`.
 2. Confirm the **public key for the new key** is registered with the ASP / OTA trust store. The ASP's public-key list endpoint should include the new key's SHA-256 fingerprint — grep for it.
-3. Dashboard open: `fawtara_signing_total{result="success|error"}` and `fawtara_clearance_submissions_total{result="rejected"}` with `reason_code=~"signature.*"`.
+3. Dashboard open: `faatora_signing_total{result="success|error"}` and `faatora_clearance_submissions_total{result="rejected"}` with `reason_code=~"signature.*"`.
 4. Freeze non-signing migrations for the window (any migration that locks `invoices` is a bad neighbour here).
-5. Announce in `#status-fawtara`: "Signing key rotation in flight. Dual-sign window starts _T_, ends _T+2h_."
+5. Announce in `#status-faatora`: "Signing key rotation in flight. Dual-sign window starts _T_, ends _T+2h_."
 
 ## Dual-signing window (recommended)
 
@@ -45,7 +45,7 @@ For each, call `GET /invoices/:id/verify-signature?key=all` which runs the store
 
 ## Rollback
 
-If `fawtara_signing_total{result="error"}` jumps or ASP rejections for signature reasons appear:
+If `faatora_signing_total{result="error"}` jumps or ASP rejections for signature reasons appear:
 
 1. Revert `SIGNING_ACTIVE_KEY_ID` to the previous value.
 2. Keep dual-sign mode on until the issue is diagnosed.
