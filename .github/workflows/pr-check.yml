@@ -72,6 +72,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Build compliance package
+        run: pnpm --filter @faatora/compliance build
+
       - name: Lint
         run: pnpm lint
 
