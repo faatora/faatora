@@ -34,49 +34,8 @@ env:
   ECS_SERVICE: faatora-api
 
 jobs:
-  migrate:
-    name: Run migrations (staging DB)
-    if: ${{ github.event.inputs.skip_migrations != 'true' }}
-    runs-on: ubuntu-latest
-    environment: staging
-    strategy:
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Assume deploy role (workload region)
-        uses: aws-actions/configure-aws-credentials@v5
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_TF_STATE_REGION }}
-
-      # The staging DB URL is held as a GitHub Actions secret because the
-      # host, user and password must not appear in the workflow. The
-      # --no-check-order flag is required because pgmigrations rows for
-      # 1710001200000_firm_billing_webhook_events and
-      # 1710001600000_firm_audit_events were inserted out of filename order
-      # in local dev; node-pg-migrate would otherwise refuse to proceed.
-      - name: Apply migrations
-        env:
-          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
-        run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
-
   terraform-plan:
     name: Terraform plan
-    needs: migrate
-    if: ${{ always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') }}
     runs-on: ubuntu-latest
     environment: staging
     outputs:
@@ -166,9 +125,49 @@ jobs:
       - name: Terraform apply
         run: terraform apply tfplan.staging
 
+  migrate:
+    name: Run migrations (staging DB)
+    needs: terraform-apply
+    if: ${{ github.event.inputs.skip_migrations != 'true' }}
+    runs-on: ubuntu-latest
+    environment: staging
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Assume deploy role (workload region)
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
+
+      # Runs AFTER terraform-apply so the RDS instance exists and is
+      # reachable. The staging DB URL is held as a GitHub Actions secret
+      # (host, user, password must not appear in the workflow). The
+      # --no-check-order flag works around the stale pgmigrations row
+      # order from the parallel-agent work during the rebrand.
+      - name: Apply migrations
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+        run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+
   deploy-image:
     name: Build, push and redeploy API container
-    needs: terraform-apply
+    needs: migrate
+    if: ${{ always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') }}
     runs-on: ubuntu-latest
     environment: staging
     steps:
