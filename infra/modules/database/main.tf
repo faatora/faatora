@@ -1,5 +1,6 @@
 locals {
-  name_prefix = "${var.project}-${var.environment}"
+  name_prefix  = "${var.project}-${var.environment}"
+  engine_major = split(".", var.engine_version)[0]
 }
 
 resource "aws_db_subnet_group" "this" {
@@ -13,8 +14,8 @@ resource "aws_db_subnet_group" "this" {
 }
 
 resource "aws_db_parameter_group" "this" {
-  name   = "${local.name_prefix}-pg16"
-  family = "postgres16"
+  name   = "${local.name_prefix}-pg${local.engine_major}"
+  family = "postgres${local.engine_major}"
 
   parameter {
     name  = "log_statement"
@@ -27,7 +28,7 @@ resource "aws_db_parameter_group" "this" {
   }
 
   tags = {
-    Name        = "${local.name_prefix}-pg16"
+    Name        = "${local.name_prefix}-pg${local.engine_major}"
     Environment = var.environment
   }
 }
