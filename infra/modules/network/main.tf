@@ -194,19 +194,6 @@ resource "aws_security_group" "db" {
     security_groups = [aws_security_group.app.id]
   }
 
-  # STAGING-ONLY HACK: allow public ingress on Postgres port so GitHub
-  # Actions CI can run migrations against the publicly_accessible RDS.
-  # Password is AWS-managed and strong. REMOVE this rule before any
-  # production data lands — tracked as Wave 3 cleanup along with
-  # switching to in-VPC migration tasks.
-  ingress {
-    description = "STAGING: Postgres from anywhere (GitHub Actions)"
-    from_port   = var.db_port
-    to_port     = var.db_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     description = "All egress"
     from_port   = 0

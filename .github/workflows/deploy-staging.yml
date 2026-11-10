@@ -127,40 +127,63 @@ jobs:
         run: terraform apply -lock-timeout=10m tfplan.staging
 
   migrate:
-    name: Run migrations (staging DB)
+    name: Run migrations (in-VPC ECS task)
     needs: terraform-apply
     if: ${{ github.event.inputs.skip_migrations != 'true' }}
     runs-on: ubuntu-latest
     environment: staging
-    strategy:
-      fail-fast: false
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Assume deploy role (workload region)
-        uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
-      # Runs AFTER terraform-apply so the RDS instance exists and is
-      # reachable. Fetches the endpoint and the AWS-managed master
-      # password at runtime using the already-assumed deploy role, so
-      # no DB secret needs to live in GitHub. The --no-check-order flag
-      # works around the stale pgmigrations row order from the
-      # parallel-agent work during the rebrand.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      # Pull the ECS cluster, migrate task def, network params, and the
+      # migrate container name from terraform state. These are produced
+      # by the terraform-apply job that this job depends on.
+      - name: Read infra from terraform state
+        id: tf
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="key=staging/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_TF_STATE_REGION }}" \
+            -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          TASK_DEF=$(terraform output -raw migrate_task_definition_arn)
+          TASK_FAMILY=$(terraform output -raw migrate_task_definition_family)
+          CONTAINER=$(terraform output -raw migrate_container_name)
+          LOG_GROUP=$(terraform output -raw migrate_log_group_name)
+          APP_SG=$(terraform output -raw app_security_group_id)
+          SUBNETS=$(terraform output -json private_subnet_ids | jq -r 'join(",")')
+          {
+            echo "cluster=$CLUSTER"
+            echo "task_def=$TASK_DEF"
+            echo "task_family=$TASK_FAMILY"
+            echo "container=$CONTAINER"
+            echo "log_group=$LOG_GROUP"
+            echo "app_sg=$APP_SG"
+            echo "subnets=$SUBNETS"
+          } >> "$GITHUB_OUTPUT"
+
+      # Build MIGRATION_DATABASE_URL on the runner from the AWS-managed
+      # RDS master-user secret. The URL is passed to the migrate
+      # container as a per-run env override; it never lands in a log
+      # (masked) or in terraform state. The uselibpqcompat + sslmode
+      # options match the API runtime and what the previous migrate
+      # step used; RDS enforces SSL via pg_hba.conf.
       - name: Resolve DB connection string from AWS
         id: db-url
         run: |
@@ -185,26 +208,105 @@ jobs:
             --output text)
           DB_USER=$(echo "$SECRET_JSON" | jq -r .username)
           DB_PASS=$(echo "$SECRET_JSON" | jq -r .password)
-          # URL-encode the password in case it contains special chars
           DB_PASS_ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
-          # Encrypted connection, no CA verification:
-          # - RDS enforces SSL via pg_hba.conf ("no encryption" error otherwise)
-          # - node-postgres aliases sslmode=require to verify-full by default,
-          #   which rejects the AWS RDS CA since it is not in Node's trust
-          #   store. The library tells us to use uselibpqcompat=true to opt
-          #   into standard libpq semantics (require = encrypt, no verify).
-          # - verify-full remains the right target before production and
-          #   requires shipping the RDS global bundle to the runner.
           URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}?uselibpqcompat=true&sslmode=require"
-          # Mask password in logs
           echo "::add-mask::${DB_PASS}"
           echo "::add-mask::${DB_PASS_ENC}"
           echo "::add-mask::${URL}"
-          # Export to subsequent steps without leaking into logs
-          echo "MIGRATION_DATABASE_URL=${URL}" >> "$GITHUB_ENV"
+          # Write to a file so the next step can read it without the
+          # value being expanded on a shell line that might get logged.
+          mkdir -p "$RUNNER_TEMP/db"
+          printf '%s' "$URL" > "$RUNNER_TEMP/db/url"
+          chmod 600 "$RUNNER_TEMP/db/url"
 
-      - name: Apply migrations
-        run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+      # One-off ECS task: run node-pg-migrate inside the VPC against
+      # the private RDS. The task definition already carries the
+      # command override; the only per-run data is MIGRATION_DATABASE_URL.
+      - name: Run migrate task
+        id: run-task
+        env:
+          CLUSTER: ${{ steps.tf.outputs.cluster }}
+          TASK_DEF: ${{ steps.tf.outputs.task_def }}
+          CONTAINER: ${{ steps.tf.outputs.container }}
+          APP_SG: ${{ steps.tf.outputs.app_sg }}
+          SUBNETS: ${{ steps.tf.outputs.subnets }}
+        run: |
+          set -euo pipefail
+          URL="$(cat "$RUNNER_TEMP/db/url")"
+          echo "::add-mask::${URL}"
+          OVERRIDES=$(jq -nc \
+            --arg name "$CONTAINER" \
+            --arg url  "$URL" \
+            '{containerOverrides:[{name:$name, environment:[{name:"MIGRATION_DATABASE_URL", value:$url}]}]}')
+          # IFS split SUBNETS (comma-separated) into a JSON array.
+          SUBNETS_JSON=$(python3 -c "import json,sys;print(json.dumps(sys.argv[1].split(',')))" "$SUBNETS")
+          NETCFG=$(jq -nc \
+            --argjson subnets "$SUBNETS_JSON" \
+            --arg sg "$APP_SG" \
+            '{awsvpcConfiguration:{subnets:$subnets, securityGroups:[$sg], assignPublicIp:"DISABLED"}}')
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEF" \
+            --launch-type FARGATE \
+            --network-configuration "$NETCFG" \
+            --overrides "$OVERRIDES" \
+            --region "$AWS_TF_STATE_REGION" \
+            --started-by "gha-${GITHUB_RUN_ID}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+          if [[ -z "$TASK_ARN" || "$TASK_ARN" == "None" ]]; then
+            echo "run-task did not return a task ARN" >&2
+            exit 1
+          fi
+          echo "task_arn=$TASK_ARN" >> "$GITHUB_OUTPUT"
+          echo "Launched migrate task: $TASK_ARN"
+
+      - name: Wait for migrate task to stop
+        env:
+          CLUSTER: ${{ steps.tf.outputs.cluster }}
+          TASK_ARN: ${{ steps.run-task.outputs.task_arn }}
+        run: |
+          set -euo pipefail
+          aws ecs wait tasks-stopped \
+            --cluster "$CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --region "$AWS_TF_STATE_REGION"
+
+      - name: Check exit code and dump logs on failure
+        env:
+          CLUSTER: ${{ steps.tf.outputs.cluster }}
+          CONTAINER: ${{ steps.tf.outputs.container }}
+          LOG_GROUP: ${{ steps.tf.outputs.log_group }}
+          TASK_ARN: ${{ steps.run-task.outputs.task_arn }}
+        run: |
+          set -euo pipefail
+          DESCRIBE=$(aws ecs describe-tasks \
+            --cluster "$CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --region "$AWS_TF_STATE_REGION")
+          EXIT_CODE=$(echo "$DESCRIBE" \
+            | jq -r --arg name "$CONTAINER" \
+              '.tasks[0].containers[] | select(.name==$name) | .exitCode // empty')
+          STOP_REASON=$(echo "$DESCRIBE" | jq -r '.tasks[0].stoppedReason // "unknown"')
+          echo "Migrate task stopped. stoppedReason=$STOP_REASON exitCode=${EXIT_CODE:-<missing>}"
+          # The log stream for an awslogs-group is <prefix>/<container>/<task-id>.
+          TASK_ID="${TASK_ARN##*/}"
+          STREAM="ecs/${CONTAINER}/${TASK_ID}"
+          if [[ "${EXIT_CODE:-1}" != "0" ]]; then
+            echo "::group::migrate task CloudWatch logs ($LOG_GROUP:$STREAM)"
+            aws logs get-log-events \
+              --log-group-name "$LOG_GROUP" \
+              --log-stream-name "$STREAM" \
+              --region "$AWS_TF_STATE_REGION" \
+              --no-start-from-head \
+              --query 'events[*].message' \
+              --output text \
+              || echo "(could not fetch logs; the task may have failed before writing any)"
+            echo "::endgroup::"
+            echo "Migrate task failed (exitCode=${EXIT_CODE:-<missing>})." >&2
+            exit 1
+          fi
+          echo "Migrations applied successfully."
 
   deploy-image:
     name: Build, push and redeploy API container
