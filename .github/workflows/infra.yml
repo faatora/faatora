@@ -24,7 +24,7 @@ concurrency:
 env:
   AWS_WORKLOAD_REGION: me-south-1
   AWS_TF_STATE_REGION: us-east-1
-  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/GitHubActionsDeployRole
+  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/fawtara-github-deploy
   TF_STATE_BUCKET: fawtara-tfstate
   TF_LOCK_TABLE: fawtara-tflock
 
