@@ -60,7 +60,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       # The staging DB URL is held as a GitHub Actions secret because the
       # host, user and password must not appear in the workflow. The
@@ -90,7 +90,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -142,7 +142,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -176,7 +176,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       - name: Login to ECR
         id: ecr-login
