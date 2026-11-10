@@ -30,8 +30,8 @@ env:
   TF_STATE_BUCKET: fawtara-tfstate
   TF_LOCK_TABLE: fawtara-tflock
   ECR_REPOSITORY: faatora-api
-  ECS_CLUSTER: faatora-staging
-  ECS_SERVICE: faatora-api
+  ECS_CLUSTER: faatora-staging-cluster
+  ECS_SERVICE: faatora-staging-app
 
 jobs:
   terraform-plan:
