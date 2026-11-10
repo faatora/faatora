@@ -156,13 +156,46 @@ jobs:
           aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       # Runs AFTER terraform-apply so the RDS instance exists and is
-      # reachable. The staging DB URL is held as a GitHub Actions secret
-      # (host, user, password must not appear in the workflow). The
-      # --no-check-order flag works around the stale pgmigrations row
-      # order from the parallel-agent work during the rebrand.
+      # reachable. Fetches the endpoint and the AWS-managed master
+      # password at runtime using the already-assumed deploy role, so
+      # no DB secret needs to live in GitHub. The --no-check-order flag
+      # works around the stale pgmigrations row order from the
+      # parallel-agent work during the rebrand.
+      - name: Resolve DB connection string from AWS
+        id: db-url
+        run: |
+          set -euo pipefail
+          DB_ID="faatora-staging-pg"
+          DB_NAME="faatora"
+          REGION="${AWS_TF_STATE_REGION}"
+          ENDPOINT=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$REGION" \
+            --query 'DBInstances[0].Endpoint.Address' \
+            --output text)
+          SECRET_ARN=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$REGION" \
+            --query 'DBInstances[0].MasterUserSecret.SecretArn' \
+            --output text)
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "$SECRET_ARN" \
+            --region "$REGION" \
+            --query SecretString \
+            --output text)
+          DB_USER=$(echo "$SECRET_JSON" | jq -r .username)
+          DB_PASS=$(echo "$SECRET_JSON" | jq -r .password)
+          # URL-encode the password in case it contains special chars
+          DB_PASS_ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
+          URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}"
+          # Mask password in logs
+          echo "::add-mask::${DB_PASS}"
+          echo "::add-mask::${DB_PASS_ENC}"
+          echo "::add-mask::${URL}"
+          # Export to subsequent steps without leaking into logs
+          echo "MIGRATION_DATABASE_URL=${URL}" >> "$GITHUB_ENV"
+
       - name: Apply migrations
-        env:
-          MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
         run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
 
   deploy-image:
