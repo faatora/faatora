@@ -27,11 +27,11 @@ Verification: `pnpm lint` passes (eslint + prettier) as of 2026-10-17.
 | apps/api | `bookkeeping.spec.ts` | 8 |
 | apps/api | `observability.spec.ts` | 13 |
 | **apps/api subtotal** | | **109** |
-| @fawtara/compliance | `semantic.spec.ts` | 13 |
-| @fawtara/compliance | `pint-om.spec.ts` | 6 |
-| @fawtara/compliance | `ubl.spec.ts` | 17 |
-| @fawtara/compliance | `validate.spec.ts` | 33 |
-| @fawtara/compliance | `corpus.spec.ts` | 2 static + 15 generated |
+| @faatora/compliance | `semantic.spec.ts` | 13 |
+| @faatora/compliance | `pint-om.spec.ts` | 6 |
+| @faatora/compliance | `ubl.spec.ts` | 17 |
+| @faatora/compliance | `validate.spec.ts` | 33 |
+| @faatora/compliance | `corpus.spec.ts` | 2 static + 15 generated |
 | **compliance subtotal** | | **~86 (71 static + 15 fixture-generated)** |
 | **Grand total observed** | | **~195** |
 
@@ -111,7 +111,7 @@ least one assertion checks tenant isolation via `withTenant`.
 | invoices | `invoices.service.ts` | — | **`create`**, **`list`**, **`get`**, **`issue`** (DRAFT → VALIDATED gate, compliance port wiring, no-lines, bad party) | N | N |
 | invoices | `parties.service.ts` | — | **`create`**, **`list`**, **`get`** | N | N |
 | invoices | `money.ts` | `computeTotals` | — | n/a | N |
-| invoices | `compliance.pipeline.ts` | — | **entire adapter** (how the service dialogues with @fawtara/compliance) | N | N |
+| invoices | `compliance.pipeline.ts` | — | **entire adapter** (how the service dialogues with @faatora/compliance) | N | N |
 | leads | `leads.service.ts` | — (only `readiness.ts` pure function) | **`create`** (the DB write, IP capture) | N | N |
 | leads | `readiness.ts` | `assessReadiness` | — | n/a | n/a |
 | pos | `products.service.ts` | `create`, `findBySku`, RLS insert | **`get`**, **`findByBarcode`**, **`update`**, **`archive`** | Y | partial (missing sku) |
@@ -216,13 +216,13 @@ Several tests use **real** `setTimeout`, not fake timers:
   gateway instead.
 - **`observability.spec.ts`** correctly calls `_resetRegistryForTests()`
   in `afterEach` for the helper suites — but the first describe
-  (`metrics endpoint`) does not reset, so its `fawtara_http_requests_total`
+  (`metrics endpoint`) does not reset, so its `faatora_http_requests_total`
   counter accumulates across runs. Not currently a problem (nothing
   asserts the absolute value), but a trap for the next person.
 - **`process.env` mutation without restore:**
   - `clearance.spec.ts` line 23: `process.env.DISABLE_CLEARANCE_CRON = '1'` — set at module load, never restored. Fine for CI (process exits) but bleeds into any spec that imports from this file via a shared `--testPathPattern`.
   - `clearance.spec.ts` sets and `delete`s `process.env.STUB_ASP_MODE` across tests — this is correct.
-  - `archive.spec.ts` line 76: `process.env.FAWTARA_ARCHIVE_DIR = archiveDir` — set in `beforeAll`, never restored in `afterAll`.
+  - `archive.spec.ts` line 76: `process.env.FAATORA_ARCHIVE_DIR = archiveDir` — set in `beforeAll`, never restored in `afterAll`.
 
 ### DB cleanup order
 
@@ -251,7 +251,7 @@ Severity scale: **HIGH** = plausible bug in a shipping path, **MEDIUM** =
 plausible bug in a less-trafficked path, **LOW** = correctness hygiene.
 
 - **GAP-01 (HIGH)**: Clearance callback for an invoice already `CLEARED` must be idempotent *at the HTTP layer*. The service-level `handleCallback` idempotency is tested (`clearance.spec.ts` line 415) but there is no HTTP route that receives a webhook callback, and no `supertest` test proving the controller (when it exists in A17) returns 200 and no-ops. Today a replay from the ASP would be a service call; tomorrow a webhook controller is likely to be added and this test should be in place before it ships. *File:* `apps/api/test/clearance-callback.e2e-spec.ts`. *Effort:* 2h.
-- **GAP-02 (HIGH)**: `InvoicesService.issue` compliance-port failure path. The service wires the real `@fawtara/compliance` validator through `COMPLIANCE_VALIDATOR`. There is zero test proving that an invoice with a known broken shape (BT-106 mismatch) is rejected with `UnprocessableEntityException` and NOT moved out of `DRAFT`. Currently `invoices.service.ts` has **no spec file**. *File:* `apps/api/test/invoices.spec.ts`. *Effort:* 3h.
+- **GAP-02 (HIGH)**: `InvoicesService.issue` compliance-port failure path. The service wires the real `@faatora/compliance` validator through `COMPLIANCE_VALIDATOR`. There is zero test proving that an invoice with a known broken shape (BT-106 mismatch) is rejected with `UnprocessableEntityException` and NOT moved out of `DRAFT`. Currently `invoices.service.ts` has **no spec file**. *File:* `apps/api/test/invoices.spec.ts`. *Effort:* 3h.
 - **GAP-03 (HIGH)**: `TenantGuard` behaviour. The guard parses `x-tenant-id`, looks up membership, and attaches `AuthContext`. Nothing tests it. A regression that lets anyone pass `x-tenant-id: <other>` would be invisible to the current suite — the integration specs bypass the guard entirely. *File:* `apps/api/test/tenant-guard.spec.ts`. *Effort:* 3h.
 - **GAP-04 (HIGH)**: Signing concurrency — two concurrent `sign` calls on the same `VALIDATED` invoice. The current test (`signing.spec.ts`) uses a scripted DB stub, so the "status re-check inside the transaction" path cannot be probed. A hand-built integration test with `Promise.all` of two `svc.sign(…)` on the same invoice ID would prove the second one errors with `BadRequestException` ("status is not VALIDATED") rather than inserting two `signed_documents` rows. *File:* `apps/api/test/signing-integration.spec.ts`. *Effort:* 4h.
 - **GAP-05 (HIGH)**: Circuit breaker half-open probe after 60s. `TransmissionCircuitBreaker.isOpen` resets `consecutiveFailures = 0` once `openUntil` elapses, letting the next drain probe. The DLQ test disables this behaviour by calling `breaker.reset()` manually. Nothing tests the half-open path. Use `jest.useFakeTimers()`, trip the breaker, `jest.advanceTimersByTime(60_001)`, assert the next `drainOnce` calls the provider exactly once. *File:* `apps/api/test/clearance.spec.ts` (new `describe('breaker half-open')`). *Effort:* 2h.

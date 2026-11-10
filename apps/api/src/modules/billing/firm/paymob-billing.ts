@@ -155,8 +155,8 @@ function synthesiseType(obj: Record<string, unknown>): string {
 
 function mapStatusFromTxn(obj: Record<string, unknown>): BillingSubscriptionStatus {
   if (Boolean(obj.is_refunded) || Boolean(obj.is_voided)) return 'canceled';
-  if (Boolean(obj.pending)) return 'incomplete';
-  if (Boolean(obj.success)) return 'active';
+  if (obj.pending) return 'incomplete';
+  if (obj.success) return 'active';
   return 'past_due';
 }
 
@@ -238,7 +238,7 @@ export interface PaymobBillingData {
 
 export interface CreateCheckoutOptions {
   /**
-   * Fawtara-side idempotency key. Paymob returns it under
+   * Faatora-side idempotency key. Paymob returns it under
    * `merchant_order_id` in callbacks. Keep the string unique per
    * payment attempt (e.g. `firm_<id>:sub_<planId>:<unix_ms>`).
    */
@@ -247,7 +247,7 @@ export interface CreateCheckoutOptions {
   readonly billingData?: PaymobBillingData;
   /**
    * Where Paymob should GET-redirect the user after completion.
-   * Defaults to `${portalReturnUrl}?customer=<id>` so the Fawtara
+   * Defaults to `${portalReturnUrl}?customer=<id>` so the Faatora
    * portal can resolve the firm from the browser-side redirect.
    */
   readonly redirectionUrl?: string;
@@ -294,22 +294,18 @@ export class PaymobBilling implements BillingProvider {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
     // Checkout URL defaults to Oman's region host; see Unified Checkout
     // doc for per-region values. Trim trailing slash too.
-    this.checkoutUrl = (opts.checkoutUrl ?? 'https://om.checkout.paymob.com').replace(
-      /\/+$/,
-      '',
-    );
+    this.checkoutUrl = (opts.checkoutUrl ?? 'https://om.checkout.paymob.com').replace(/\/+$/, '');
     this.apiKey = opts.apiKey;
     this.hmacSecret = opts.hmacSecret;
     this.integrationId = opts.integrationId;
     this.iframeId = opts.iframeId;
     this.secretKey = opts.secretKey ?? null;
     this.publicKey = opts.publicKey ?? null;
-    // Default Fawtara-hosted portal route. Paymob has no hosted
+    // Default Faatora-hosted portal route. Paymob has no hosted
     // self-serve portal; see docs/research/paymob-uat-integration-plan.md
     // section 3. The firm-console UI owns change-card / change-plan /
     // cancel / invoice-history.
-    this.portalReturnUrl =
-      opts.portalReturnUrl ?? 'https://app.fawtara.om/firm/settings/billing';
+    this.portalReturnUrl = opts.portalReturnUrl ?? 'https://app.faatora.om/firm/settings/billing';
   }
 
   /**
@@ -339,9 +335,7 @@ export class PaymobBilling implements BillingProvider {
     const isProd = (env.NODE_ENV ?? 'development') === 'production';
 
     if (!apiKey) {
-      throw new BillingProviderError(
-        'PAYMOB_API_KEY is required when BILLING_PROVIDER=paymob',
-      );
+      throw new BillingProviderError('PAYMOB_API_KEY is required when BILLING_PROVIDER=paymob');
     }
     if (!integrationId) {
       throw new BillingProviderError(
@@ -411,9 +405,7 @@ export class PaymobBilling implements BillingProvider {
       body: { api_key: this.apiKey },
     });
     if (res.status < 200 || res.status >= 300) {
-      throw new BillingProviderError(
-        `paymob auth token request failed: HTTP ${res.status}`,
-      );
+      throw new BillingProviderError(`paymob auth token request failed: HTTP ${res.status}`);
     }
     const body = res.body as PaymobAuthResponse;
     if (!body || typeof body.token !== 'string') {
@@ -430,7 +422,7 @@ export class PaymobBilling implements BillingProvider {
    * Paymob has no first-class Customer object the way Stripe does.
    * The closest primitive is the `billing_data` block attached to an
    * Intention. For firm-console billing the adapter returns a
-   * stable synthetic customer id (`firm_<uuid>`) that Fawtara stores
+   * stable synthetic customer id (`firm_<uuid>`) that Faatora stores
    * on the firm row and threads into every future Intention under
    * `extras.firm_customer_ref` so callbacks can be tied back to the
    * firm without ever calling "GET /customer" (there isn't one).
@@ -462,13 +454,13 @@ export class PaymobBilling implements BillingProvider {
   /**
    * Create a Paymob Subscription Plan. Paymob's plan model is weaker
    * than Stripe's (no trials, no prorations, closed set of frequency
-   * values: 7, 15, 30, 60, 90, 180, 360 days). We map Fawtara's
+   * values: 7, 15, 30, 60, 90, 180, 360 days). We map Faatora's
    * monthly to 30 and annual to 360, following the pattern in
    * docs/research/paymob-uat-integration-plan.md section 2.1.
    *
    * trialDays is not supported by Paymob and is silently ignored
    * after a warn log. Callers that care about trials must handle them
-   * at the Fawtara layer (delay the first charge via scheduler) or
+   * at the Faatora layer (delay the first charge via scheduler) or
    * stay on Stripe.
    *
    * Under the new Intention + Unified Checkout flow, this method only
@@ -518,7 +510,7 @@ export class PaymobBilling implements BillingProvider {
         'Content-Type': 'application/json',
       },
       body: {
-        name: `fawtara-${providerCustomerId}-${planId}`,
+        name: `faatora-${providerCustomerId}-${planId}`,
         frequency,
         amount_cents,
         integration: this.integrationId,
@@ -601,22 +593,18 @@ export class PaymobBilling implements BillingProvider {
     // personal data here — callers that have real data pass it via
     // options.billingData.
     const defaultBilling: Required<
-      Pick<
-        PaymobBillingData,
-        'first_name' | 'last_name' | 'email' | 'phone_number' | 'country'
-      >
+      Pick<PaymobBillingData, 'first_name' | 'last_name' | 'email' | 'phone_number' | 'country'>
     > = {
       first_name: 'Firm',
       last_name: 'Subscriber',
-      email: 'billing@fawtara.om',
+      email: 'billing@faatora.om',
       phone_number: '+96800000000',
       country: 'OM',
     };
     const billing_data: PaymobBillingData = { ...defaultBilling, ...options.billingData };
 
     const specialReference =
-      options.specialReference ??
-      `${providerCustomerId}:${planId}:${Date.now().toString(36)}`;
+      options.specialReference ?? `${providerCustomerId}:${planId}:${Date.now().toString(36)}`;
 
     const body: Record<string, unknown> = {
       amount: amount_cents,
@@ -624,9 +612,9 @@ export class PaymobBilling implements BillingProvider {
       payment_methods: [Number.parseInt(this.integrationId, 10) || this.integrationId],
       items: [
         {
-          name: `Fawtara subscription ${planId}`,
+          name: `Faatora subscription ${planId}`,
           amount: amount_cents,
-          description: `Fawtara firm-console subscription (${planId})`,
+          description: `Faatora firm-console subscription (${planId})`,
           quantity: 1,
         },
       ],
@@ -634,7 +622,7 @@ export class PaymobBilling implements BillingProvider {
       special_reference: specialReference,
       extras: {
         firm_customer_ref: providerCustomerId,
-        fawtara_plan_id: planId,
+        faatora_plan_id: planId,
         ...(options.extras ?? {}),
       },
     };
@@ -665,9 +653,7 @@ export class PaymobBilling implements BillingProvider {
       typeof intent.client_secret !== 'string' ||
       intent.client_secret.length === 0
     ) {
-      throw new BillingProviderError(
-        'paymob intention response missing id or client_secret',
-      );
+      throw new BillingProviderError('paymob intention response missing id or client_secret');
     }
 
     // Unified Checkout URL. The publicKey and clientSecret are opaque
@@ -715,14 +701,14 @@ export class PaymobBilling implements BillingProvider {
 
   /**
    * Paymob has no hosted self-serve customer portal (see research doc
-   * section 3). This returns a Fawtara-hosted route; the firm-console
+   * section 3). This returns a Faatora-hosted route; the firm-console
    * UI is responsible for change-card / change-plan / cancel / invoice
    * history AND for kicking off a new Unified Checkout session (which
    * goes through `createCheckoutSession`). We include the provider
-   * customer id as a query param so the Fawtara portal page can resolve
+   * customer id as a query param so the Faatora portal page can resolve
    * the firm without a DB lookup from the redirect handler.
    *
-   * `returnUrl` on the port is the URL Fawtara's portal should send
+   * `returnUrl` on the port is the URL Faatora's portal should send
    * the user to on done; we encode it so the portal page can forward
    * it to the browser after they finish their action.
    *
@@ -731,10 +717,7 @@ export class PaymobBilling implements BillingProvider {
    * shape and Stripe depends on it. Paymob-specific checkout minting
    * lives on `createCheckoutSession` instead.
    */
-  async getCustomerPortalUrl(
-    providerCustomerId: string,
-    returnUrl: string,
-  ): Promise<string> {
+  async getCustomerPortalUrl(providerCustomerId: string, returnUrl: string): Promise<string> {
     const base = this.portalReturnUrl;
     const u = new URL(base);
     u.searchParams.set('customer', providerCustomerId);
@@ -774,12 +757,8 @@ export class PaymobBilling implements BillingProvider {
       const msg = err instanceof Error ? err.message : 'invalid JSON body';
       throw new BillingSignatureError(`paymob webhook body is not valid JSON: ${msg}`);
     }
-    const concat = HMAC_FIELD_ORDER
-      .map((f) => normalize(pickField(payload, f)))
-      .join('');
-    const expected = createHmac('sha512', this.hmacSecret)
-      .update(concat, 'utf8')
-      .digest('hex');
+    const concat = HMAC_FIELD_ORDER.map((f) => normalize(pickField(payload, f))).join('');
+    const expected = createHmac('sha512', this.hmacSecret).update(concat, 'utf8').digest('hex');
     const sigLower = signature.toLowerCase();
     // Length check before timingSafeEqual: Node's impl throws on
     // mismatched lengths, which would leak info on an obviously bad
@@ -801,8 +780,7 @@ export class PaymobBilling implements BillingProvider {
       throw new BillingSignatureError('paymob webhook has no transaction id');
     }
     const createdAtRaw = obj.created_at ?? payload.created_at;
-    const createdAt =
-      typeof createdAtRaw === 'string' ? new Date(createdAtRaw) : new Date();
+    const createdAt = typeof createdAtRaw === 'string' ? new Date(createdAtRaw) : new Date();
     return {
       provider: 'paymob',
       providerEventId: eventId,

@@ -18,14 +18,14 @@ import type {
  * verification depends on.
  *
  * Layout: `${baseDir}/${tenantId}/${YYYY}/${MM}/${documentUuid}.xml`.
- * `baseDir` is `FAWTARA_ARCHIVE_DIR` or `/tmp/fawtara-archive` by default.
+ * `baseDir` is `FAATORA_ARCHIVE_DIR` or `/tmp/faatora-archive` by default.
  */
 @Injectable()
 export class FilesystemStorage implements ArchiveStorage {
   private readonly baseDir: string;
 
   constructor() {
-    this.baseDir = process.env.FAWTARA_ARCHIVE_DIR ?? '/tmp/fawtara-archive';
+    this.baseDir = process.env.FAATORA_ARCHIVE_DIR ?? '/tmp/faatora-archive';
   }
 
   getBaseDir(): string {

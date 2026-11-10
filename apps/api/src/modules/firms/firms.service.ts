@@ -564,7 +564,7 @@ export class FirmsService implements OnModuleDestroy {
   /**
    * Provision a brand-new client tenant AND the firm_client_tenants link
    * in a single transaction. This is the fast-path accountants use when
-   * adding a client that doesn't yet exist in Fawtara.
+   * adding a client that doesn't yet exist in Faatora.
    *
    * Transaction order:
    *   1. SET app.firm_id (so firm_client_tenants INSERT passes RLS)
@@ -602,9 +602,7 @@ export class FirmsService implements OnModuleDestroy {
       const linkedIds = await tx
         .select({ tenantId: firmClientTenants.tenantId })
         .from(firmClientTenants)
-        .where(
-          and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)),
-        );
+        .where(and(eq(firmClientTenants.firmId, firmId), isNull(firmClientTenants.revokedAt)));
       for (const link of linkedIds) {
         await tx.execute(sql`select set_config('app.tenant_id', ${link.tenantId}, true)`);
         const tRow = await tx

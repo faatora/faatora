@@ -1,21 +1,21 @@
 # Security Policy
 
-Thank you for helping keep Fawtara and its users safe.
+Thank you for helping keep Faatora and its users safe.
 
 ## Supported versions
 
-Fawtara is in active Wave 3 development; only the current `main` branch is supported. There are no backported security releases yet.
+Faatora is in active Wave 3 development; only the current `main` branch is supported. There are no backported security releases yet.
 
 | Version | Supported |
 |---|---|
 | `main` (unreleased) | yes |
 | any tagged `0.x` pre-release | no |
 
-Once Fawtara reaches `1.0`, this table will list the supported minor versions and their security-fix windows.
+Once Faatora reaches `1.0`, this table will list the supported minor versions and their security-fix windows.
 
 ## Reporting a vulnerability
 
-Please email **security@fawtara.om** with a clear description, reproduction steps, affected endpoints or files, and the impact you observed.
+Please email **security@faatora.om** with a clear description, reproduction steps, affected endpoints or files, and the impact you observed.
 
 For Wave 3 we accept plain-text email only; a PGP key will be published alongside the first production release. (Placeholder — this will change for `1.0`.)
 
@@ -32,7 +32,7 @@ Please do NOT open a public GitHub issue, post the finding in a chat channel, or
 
 In scope:
 
-- The Fawtara API (`apps/api`) running against the current `main` schema and migrations.
+- The Faatora API (`apps/api`) running against the current `main` schema and migrations.
 - The signing, clearance, archive, invoicing, imports, accountant, billing, POS and leads modules.
 - The Terraform modules under `infra/` as they would be applied with their documented variables.
 
@@ -41,9 +41,9 @@ Out of scope:
 - Test suites (`apps/api/test`, `apps/api/jest.config.*`) and any demo or canary data.
 - The dev-only `StubAspProvider` and anything behind `NODE_ENV !== 'production'`.
 - The `FilesystemStorage` archive adapter — it is dev/CI only and refused in production.
-- `LocalSigner` and the `/tmp/fawtara-dev-signing.pem` key path — dev/CI only.
+- `LocalSigner` and the `/tmp/faatora-dev-signing.pem` key path — dev/CI only.
 - Rate-limiting findings on local-dev deployments (no WAF, no ALB).
-- Social-engineering, physical-access, DoS floods against third-party dependencies (Cognito, S3, RDS) that are not caused by a Fawtara-side misuse.
+- Social-engineering, physical-access, DoS floods against third-party dependencies (Cognito, S3, RDS) that are not caused by a Faatora-side misuse.
 
 ## Safe-harbour
 

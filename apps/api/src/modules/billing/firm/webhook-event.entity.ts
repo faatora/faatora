@@ -12,15 +12,7 @@
  * global Drizzle schema sees it and migrations keep the one-source
  * convention used elsewhere in the project.
  */
-import {
-  pgTable,
-  uuid,
-  text,
-  timestamp,
-  jsonb,
-  index,
-  unique,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, jsonb, index, unique } from 'drizzle-orm/pg-core';
 
 export const billingWebhookEvents = pgTable(
   'billing_webhook_events',

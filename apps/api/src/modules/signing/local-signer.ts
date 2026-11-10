@@ -8,7 +8,7 @@ import type { Signer, SignResult } from './signer.port';
  * LocalSigner — software-based RSA-SHA256 signer for dev/CI use.
  *
  * On first use it generates a 2048-bit RSA keypair in memory. If the file at
- * `/tmp/fawtara-dev-signing.pem` exists on process start we load that keypair
+ * `/tmp/faatora-dev-signing.pem` exists on process start we load that keypair
  * instead, which gives stable keys across process restarts in a dev container.
  * On generation we persist the new keypair to that path so subsequent restarts
  * reuse it.
@@ -20,7 +20,7 @@ import type { Signer, SignResult } from './signer.port';
 export class LocalSigner implements Signer {
   private static readonly ALGORITHM = 'RSA-SHA256';
   private static readonly KEY_ID = 'local-dev-key';
-  private static readonly KEY_PATH = path.join('/tmp', 'fawtara-dev-signing.pem');
+  private static readonly KEY_PATH = path.join('/tmp', 'faatora-dev-signing.pem');
 
   private privateKey?: forge.pki.rsa.PrivateKey;
   private publicKey?: forge.pki.rsa.PublicKey;

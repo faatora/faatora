@@ -1,6 +1,6 @@
 variable "aws_region" {
   type    = string
-  default = "me-south-1"
+  default = "us-east-1"
 }
 
 variable "environment" {
@@ -9,7 +9,7 @@ variable "environment" {
 
 variable "project" {
   type    = string
-  default = "fawtara"
+  default = "faatora"
 }
 
 variable "enable_infra" {

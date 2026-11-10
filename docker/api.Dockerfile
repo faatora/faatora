@@ -7,7 +7,7 @@ COPY pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY apps/api ./apps/api
 COPY packages ./packages
 RUN pnpm install --no-frozen-lockfile
-RUN pnpm --filter @fawtara/api build
+RUN pnpm --filter @faatora/api build
 
 FROM node:20-slim AS runtime
 RUN corepack enable

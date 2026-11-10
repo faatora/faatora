@@ -59,7 +59,7 @@ export interface CreateFirmInput {
 function authHeaders(): Record<string, string> {
   let token: string | null = null;
   try {
-    token = localStorage.getItem('fawtara_access_token');
+    token = localStorage.getItem('faatora_access_token');
   } catch {
     token = null;
   }
@@ -143,7 +143,7 @@ export function fetchKpis(): Promise<TenantKpis[]> {
 
 export function switchToTenant(tenantId: string): void {
   try {
-    localStorage.setItem('fawtara_tenant_id', tenantId);
+    localStorage.setItem('faatora_tenant_id', tenantId);
   } catch {
     // storage disabled — ignore
   }

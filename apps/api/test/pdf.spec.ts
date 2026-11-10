@@ -114,7 +114,7 @@ function sample(): RenderInput {
         lineNet: 20.0,
       },
     ],
-    supplier: { name: 'Fawtara Supplier Co', vatin: 'OM1234567890', country: 'OM' },
+    supplier: { name: 'Faatora Supplier Co', vatin: 'OM1234567890', country: 'OM' },
     buyer: { name: 'Acme Trading LLC', vatin: 'OM9876543210', country: 'OM' },
     vatBreakdown: [{ category: 'S', rate: 5, taxable: 100, tax: 5 }],
     qrPngBase64: SAMPLE_QR_PNG_BASE64,
@@ -133,7 +133,7 @@ describe('renderPdf', () => {
     expect(contains(text, 'INV-2026-1001')).toBe(true);
     expect(contains(text, '2026-10-17')).toBe(true);
     expect(contains(text, '11111111-2222-3333-4444-555555555555')).toBe(true);
-    expect(contains(text, 'Fawtara Supplier Co')).toBe(true);
+    expect(contains(text, 'Faatora Supplier Co')).toBe(true);
     expect(contains(text, 'OM1234567890')).toBe(true);
     expect(contains(text, 'Acme Trading LLC')).toBe(true);
     expect(contains(text, 'OM9876543210')).toBe(true);
@@ -145,7 +145,7 @@ describe('renderPdf', () => {
     expect(contains(text, '105.000')).toBe(true);
     expect(contains(text, 'VAT breakdown')).toBe(true);
     expect(contains(text, 'Standard')).toBe(true);
-    expect(contains(text, 'Fawtara')).toBe(true);
+    expect(contains(text, 'Faatora')).toBe(true);
   });
 
   it('embeds the QR PNG image into the PDF payload', async () => {

@@ -20,9 +20,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as schema from '../src/db/schema';
-import { DB } from '../src/db/db.module';
 import { withFirm } from '../src/db/with-firm';
-import { withTenant } from '../src/db/with-tenant';
 import { withFirmTenant } from '../src/db/with-firm-tenant';
 import { invoices } from '../src/db/schema/invoicing';
 import { importBatches, importColumnMappings } from '../src/db/schema/firm-imports';
@@ -119,10 +117,14 @@ describe('Firm Imports (W2-D)', () => {
 
   beforeAll(async () => {
     admin = new Pool({ connectionString: ADMIN_URL });
-    await admin.query(
-      `INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`,
-      [ownerA, `sub-${ownerA}`, `ownerA-${ownerA}@test`, ownerB, `sub-${ownerB}`, `ownerB-${ownerB}@test`],
-    );
+    await admin.query(`INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`, [
+      ownerA,
+      `sub-${ownerA}`,
+      `ownerA-${ownerA}@test`,
+      ownerB,
+      `sub-${ownerB}`,
+      `ownerB-${ownerB}@test`,
+    ]);
     await admin.query(`INSERT INTO tenants (id, name) VALUES ($1,'W2D TA'),($2,'W2D TB')`, [
       tenantA,
       tenantB,
@@ -149,7 +151,10 @@ describe('Firm Imports (W2-D)', () => {
 
   afterAll(async () => {
     await admin.query(`DELETE FROM import_batches WHERE firm_id IN ($1,$2)`, [firmA, firmB]);
-    await admin.query(`DELETE FROM import_column_mappings WHERE firm_id IN ($1,$2)`, [firmA, firmB]);
+    await admin.query(`DELETE FROM import_column_mappings WHERE firm_id IN ($1,$2)`, [
+      firmA,
+      firmB,
+    ]);
     await admin.query(`DELETE FROM invoices WHERE tenant_id IN ($1,$2)`, [tenantA, tenantB]);
     await admin.query(`DELETE FROM parties WHERE tenant_id IN ($1,$2)`, [tenantA, tenantB]);
     await admin.query(`DELETE FROM firms WHERE id IN ($1,$2)`, [firmA, firmB]);
@@ -161,7 +166,10 @@ describe('Firm Imports (W2-D)', () => {
 
   afterEach(async () => {
     await admin.query(`DELETE FROM import_batches WHERE firm_id IN ($1,$2)`, [firmA, firmB]);
-    await admin.query(`DELETE FROM import_column_mappings WHERE firm_id IN ($1,$2)`, [firmA, firmB]);
+    await admin.query(`DELETE FROM import_column_mappings WHERE firm_id IN ($1,$2)`, [
+      firmA,
+      firmB,
+    ]);
     await admin.query(`DELETE FROM invoices WHERE tenant_id IN ($1,$2)`, [tenantA, tenantB]);
     await admin.query(`DELETE FROM parties WHERE tenant_id IN ($1,$2)`, [tenantA, tenantB]);
   });
@@ -236,9 +244,7 @@ describe('Firm Imports (W2-D)', () => {
     });
 
     it('parses the on-disk Tally Sales Register fixture', async () => {
-      const buf = readFileSync(
-        join(__dirname, 'fixtures/imports/tally-sales-register.csv'),
-      );
+      const buf = readFileSync(join(__dirname, 'fixtures/imports/tally-sales-register.csv'));
       const r = await parseTallyCsv(buf);
       expect(r.errors).toEqual([]);
       expect(r.rawRows).toHaveLength(3);
@@ -454,7 +460,9 @@ nope,Sales,INV-X,Alpha LLC,OM1100000011,100.000,5.000,105.000
     });
 
     it('rejects an unknown or tampered preview token', async () => {
-      await expect(svc.commit(firmA, ownerA, 'not-a-real-token')).rejects.toThrow(/Invalid|unknown/i);
+      await expect(svc.commit(firmA, ownerA, 'not-a-real-token')).rejects.toThrow(
+        /Invalid|unknown/i,
+      );
     });
 
     it('rejects committing a preview minted by a DIFFERENT firm', async () => {

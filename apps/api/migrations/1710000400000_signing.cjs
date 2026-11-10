@@ -15,7 +15,7 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('signed_documents', 'tenant_id', { name: 'signed_documents_tenant_idx' });
   pgm.createIndex('signed_documents', 'invoice_id', { name: 'signed_documents_invoice_idx' });
-  pgm.sql(`GRANT SELECT, INSERT ON signed_documents TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT ON signed_documents TO faatora_app;`);
   pgm.sql(`ALTER TABLE signed_documents ENABLE ROW LEVEL SECURITY;`);
   pgm.sql(`ALTER TABLE signed_documents FORCE ROW LEVEL SECURITY;`);
   pgm.sql(

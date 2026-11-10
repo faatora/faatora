@@ -32,11 +32,9 @@ describe('BatchOperationsPage', () => {
   beforeEach(() => {
     // jsdom lacks URL.createObjectURL by default.
     if (!('createObjectURL' in URL)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (URL as any).createObjectURL = vi.fn(() => 'blob:mock');
     }
     if (!('revokeObjectURL' in URL)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (URL as any).revokeObjectURL = vi.fn();
     }
   });
@@ -117,7 +115,9 @@ describe('BatchOperationsPage', () => {
 
     await waitFor(() => {
       const called = fetchSpy.mock.calls.some(([u]) =>
-        String(u).includes('/operations/vat-return.csv?periodStart=2026-03-01&periodEnd=2026-03-31'),
+        String(u).includes(
+          '/operations/vat-return.csv?periodStart=2026-03-01&periodEnd=2026-03-31',
+        ),
       );
       expect(called).toBe(true);
     });

@@ -51,7 +51,7 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('invoice_lines', 'invoice_id', { name: 'invoice_lines_invoice_idx' });
   pgm.createIndex('invoice_lines', 'tenant_id', { name: 'invoice_lines_tenant_idx' });
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO faatora_app;`);
   for (const tbl of ['parties', 'invoices', 'invoice_lines']) {
     pgm.sql(`ALTER TABLE ${tbl} ENABLE ROW LEVEL SECURITY;`);
     pgm.sql(`ALTER TABLE ${tbl} FORCE ROW LEVEL SECURITY;`);

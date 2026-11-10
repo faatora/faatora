@@ -26,12 +26,12 @@ concurrency:
 env:
   AWS_WORKLOAD_REGION: me-south-1
   AWS_TF_STATE_REGION: us-east-1
-  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/GitHubActionsDeployRole
+  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/fawtara-github-deploy
   TF_STATE_BUCKET: fawtara-tfstate
   TF_LOCK_TABLE: fawtara-tflock
-  ECR_REPOSITORY: fawtara-api
-  ECS_CLUSTER: fawtara-staging
-  ECS_SERVICE: fawtara-api
+  ECR_REPOSITORY: faatora-api
+  ECS_CLUSTER: faatora-staging
+  ECS_SERVICE: faatora-api
 
 jobs:
   migrate:
@@ -50,17 +50,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install
         run: pnpm install --frozen-lockfile
 
       - name: Assume deploy role (workload region)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       # The staging DB URL is held as a GitHub Actions secret because the
       # host, user and password must not appear in the workflow. The
@@ -71,7 +71,7 @@ jobs:
       - name: Apply migrations
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
-        run: pnpm --filter @fawtara/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+        run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
 
   terraform-plan:
     name: Terraform plan
@@ -87,10 +87,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -114,6 +114,7 @@ jobs:
         run: |
           terraform plan \
             -var environment=staging \
+            -var aws_region=${{ env.AWS_TF_STATE_REGION }} \
             -var enable_infra=true \
             -out=tfplan.staging
 
@@ -139,10 +140,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -173,10 +174,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       - name: Login to ECR
         id: ecr-login

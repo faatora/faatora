@@ -10,7 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FirmGuard, type FirmAuthedRequest } from '../../auth/firm.guard';
-import { AccountantAuthGuard, type AccountantAuthedRequest } from '../accountant/accountant-auth.guard';
+import {
+  AccountantAuthGuard,
+  type AccountantAuthedRequest,
+} from '../accountant/accountant-auth.guard';
 import { FirmsService } from './firms.service';
 import { FirmDashboardService } from './dashboard.service';
 import {

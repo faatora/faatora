@@ -39,8 +39,8 @@ exports.up = (pgm) => {
   });
 
   // Public tables (no RLS) — service layer enforces authorization through tenant membership checks.
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON accountant_firms TO fawtara_app;`);
-  pgm.sql(`GRANT SELECT, INSERT, DELETE ON accountant_client_links TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON accountant_firms TO faatora_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, DELETE ON accountant_client_links TO faatora_app;`);
 };
 
 exports.down = (pgm) => {

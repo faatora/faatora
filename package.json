@@ -1,5 +1,5 @@
 {
-  "name": "fawtara",
+  "name": "faatora",
   "private": true,
   "version": "0.1.0",
   "engines": {
@@ -12,9 +12,9 @@
     "test": "pnpm -r test",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "dev:api": "pnpm --filter @fawtara/api start:dev",
-    "dev:web": "pnpm --filter @fawtara/web dev",
-    "db:migrate": "pnpm --filter @fawtara/api db:migrate",
+    "dev:api": "pnpm --filter @faatora/api start:dev",
+    "dev:web": "pnpm --filter @faatora/web dev",
+    "db:migrate": "pnpm --filter @faatora/api db:migrate",
     "provision:user": "node apps/api/scripts/provision-test-user.cjs"
   },
   "devDependencies": {

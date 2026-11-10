@@ -108,8 +108,8 @@ describe('ClearanceGatewayService', () => {
     admin = new Pool({ connectionString: ADMIN_URL });
     appPool = new Pool({ connectionString: APP_URL });
     db = drizzle(appPool, { schema }) as Database;
-    archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fawtara-clearance-archive-'));
-    process.env.FAWTARA_ARCHIVE_DIR = archiveDir;
+    archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), 'faatora-clearance-archive-'));
+    process.env.FAATORA_ARCHIVE_DIR = archiveDir;
     archiveService = new ArchiveService(db, new FilesystemStorage());
   });
 

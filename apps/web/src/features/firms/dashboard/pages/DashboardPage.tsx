@@ -132,9 +132,7 @@ export function DashboardPage() {
             <h1 className="text-start text-xl font-semibold text-slate-900">
               {t('firms.dashboard.title')}
             </h1>
-            <p className="mt-1 text-start text-sm text-slate-600">
-              {activeFirm?.name ?? ''}
-            </p>
+            <p className="mt-1 text-start text-sm text-slate-600">{activeFirm?.name ?? ''}</p>
           </div>
         </header>
         <ShellCard className="mt-6">
@@ -357,17 +355,8 @@ function IssuesPanel({ issues }: { issues: FirmDashboardIssue[] }) {
 
 function SeverityDot({ severity }: { severity: IssueSeverity }) {
   const color =
-    severity === 'error'
-      ? 'bg-rose-500'
-      : severity === 'warning'
-        ? 'bg-amber-500'
-        : 'bg-sky-500';
-  return (
-    <span
-      aria-hidden="true"
-      className={`mt-1 inline-block h-2 w-2 rounded-full ${color}`}
-    />
-  );
+    severity === 'error' ? 'bg-rose-500' : severity === 'warning' ? 'bg-amber-500' : 'bg-sky-500';
+  return <span aria-hidden="true" className={`mt-1 inline-block h-2 w-2 rounded-full ${color}`} />;
 }
 
 // --- vat returns panel ---
@@ -440,10 +429,7 @@ function DashboardSkeleton() {
       <div className="h-6 w-56 rounded bg-slate-200 animate-pulse" />
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
+          <div key={i} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="h-3 w-20 rounded bg-slate-200 animate-pulse" />
             <div className="mt-3 h-6 w-12 rounded bg-slate-200 animate-pulse" />
           </div>
@@ -459,9 +445,7 @@ function DashboardSkeleton() {
 
 function ShellCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div
-      className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm ${className ?? ''}`}
-    >
+    <div className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm ${className ?? ''}`}>
       {children}
     </div>
   );

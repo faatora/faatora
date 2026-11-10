@@ -1,5 +1,5 @@
 // TODO: wire up a real login UI; for now we read the bearer token and the active
-// tenant id out of localStorage ('fawtara_access_token', 'fawtara_tenant_id').
+// tenant id out of localStorage ('faatora_access_token', 'faatora_tenant_id').
 // Pattern mirrors apps/web/src/pages/checker/api.ts.
 
 export type TenderMethod = 'cash' | 'card' | 'mixed';
@@ -82,9 +82,9 @@ function authHeaders(): Record<string, string> {
     'Content-Type': 'application/json',
     'x-correlation-id': crypto.randomUUID(),
   };
-  const token = readLocal('fawtara_access_token');
+  const token = readLocal('faatora_access_token');
   if (token) h['Authorization'] = `Bearer ${token}`;
-  const tenant = readLocal('fawtara_tenant_id');
+  const tenant = readLocal('faatora_tenant_id');
   if (tenant) h['x-tenant-id'] = tenant;
   return h;
 }

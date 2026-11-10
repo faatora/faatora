@@ -20,10 +20,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { DB } from '../src/db/db.module';
-import {
-  FirmDashboardService,
-  type FirmDashboard,
-} from '../src/modules/firms/dashboard.service';
+import { FirmDashboardService, type FirmDashboard } from '../src/modules/firms/dashboard.service';
 import * as schema from '../src/db/schema';
 
 const APP_URL = process.env.DATABASE_URL as string;
@@ -35,14 +32,7 @@ interface SeedInvoice {
   tenantId: string;
   partyId: string;
   number: string;
-  status:
-    | 'DRAFT'
-    | 'VALIDATED'
-    | 'SIGNED'
-    | 'SUBMITTED'
-    | 'CLEARED'
-    | 'REJECTED'
-    | 'ARCHIVED';
+  status: 'DRAFT' | 'VALIDATED' | 'SIGNED' | 'SUBMITTED' | 'CLEARED' | 'REJECTED' | 'ARCHIVED';
   issueDate: string;
   vatTotal: string;
   grandTotal: string;
@@ -220,10 +210,14 @@ describe('FirmDashboardService', () => {
     admin = new Pool({ connectionString: ADMIN_URL });
 
     // Users
-    await admin.query(
-      `INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`,
-      [ownerA, `sub-${ownerA}`, 'ownerA-dash@test', ownerB, `sub-${ownerB}`, 'ownerB-dash@test'],
-    );
+    await admin.query(`INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`, [
+      ownerA,
+      `sub-${ownerA}`,
+      'ownerA-dash@test',
+      ownerB,
+      `sub-${ownerB}`,
+      'ownerB-dash@test',
+    ]);
     // Tenants (names in alphabetical order inside each firm)
     await admin.query(
       `INSERT INTO tenants (id, name) VALUES
@@ -232,10 +226,10 @@ describe('FirmDashboardService', () => {
       [a1, a2, a3, b1, b2, b3],
     );
     // Firms
-    await admin.query(
-      `INSERT INTO firms (id, name) VALUES ($1,'DashFirmA'),($2,'DashFirmB')`,
-      [firmA, firmB],
-    );
+    await admin.query(`INSERT INTO firms (id, name) VALUES ($1,'DashFirmA'),($2,'DashFirmB')`, [
+      firmA,
+      firmB,
+    ]);
     await admin.query(
       `INSERT INTO firm_memberships (firm_id, user_id, role) VALUES ($1,$2,'owner'),($3,$4,'owner')`,
       [firmA, ownerA, firmB, ownerB],
@@ -247,9 +241,10 @@ describe('FirmDashboardService', () => {
       [firmA, a1, a2, a3, firmB, b1, b2, b3],
     );
     // Parties (one per tenant)
-    const partyRows: Array<[string, string]> = Object.entries(partyByTenant).map(
-      ([tid, pid]) => [pid, tid],
-    );
+    const partyRows: Array<[string, string]> = Object.entries(partyByTenant).map(([tid, pid]) => [
+      pid,
+      tid,
+    ]);
     for (const [pid, tid] of partyRows) {
       await admin.query(
         `INSERT INTO parties (id, tenant_id, kind, name) VALUES ($1,$2,'customer',$3)`,
@@ -399,7 +394,8 @@ describe('FirmDashboardService', () => {
     it('surfaces at least one issue when a seeded invoice is REJECTED', () => {
       // A has A2-fail REJECTED — expect it in the list with severity error.
       const hasReject = dashA.issues.some(
-        (i) => i.severity === 'error' && i.invoiceId === seedsA.find((s) => s.number === 'A2-fail')!.id,
+        (i) =>
+          i.severity === 'error' && i.invoiceId === seedsA.find((s) => s.number === 'A2-fail')!.id,
       );
       expect(hasReject).toBe(true);
     });

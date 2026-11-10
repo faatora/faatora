@@ -92,10 +92,7 @@ export class ClientOnboardingController {
    * client tenant. No state mutation.
    */
   @Post(':id/operations/validate-all')
-  validateAll(
-    @Req() req: FirmAuthedRequest,
-    @Param('id', new ParseUUIDPipe()) _firmId: string,
-  ) {
+  validateAll(@Req() req: FirmAuthedRequest, @Param('id', new ParseUUIDPipe()) _firmId: string) {
     void _firmId;
     return this.batch.validateAllPending(req.firmId!);
   }

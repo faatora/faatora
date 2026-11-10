@@ -1,4 +1,4 @@
-# Fawtara Security Review — Wave 3
+# Faatora Security Review — Wave 3
 
 **Reviewer:** A18 (staff-level security review)
 **Date:** 2026-10-17
@@ -9,7 +9,7 @@
 
 ## 1. Executive summary
 
-Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORCE ROW LEVEL SECURITY` with symmetric `USING + WITH CHECK` policies, and the application-level `fawtara_app` role has no RLS bypass. However, three show-stoppers block pre-production: (a) the `/invoices/:id/sign` endpoint signs **attacker-supplied XML** rather than server-rebuilt UBL, so a tenant clerk can sign a document whose line items, parties, and totals do not match the DB record; (b) `SigningModule` unconditionally binds `LocalSigner` (software RSA key in `/tmp`) with no `NODE_ENV=production` guard; and (c) the clearance callback path (`handleCallback`) has no HMAC/mTLS verification planned yet, and keys the invoice lookup on a bare `asp_reference` string, which permits state-flip injection once an HTTP route is exposed. These are expected Wave-3 gaps but each must be closed before the first production tenant lands.
+Faatora's RLS-first tenancy model is sound: every tenant-scoped table uses `FORCE ROW LEVEL SECURITY` with symmetric `USING + WITH CHECK` policies, and the application-level `faatora_app` role has no RLS bypass. However, three show-stoppers block pre-production: (a) the `/invoices/:id/sign` endpoint signs **attacker-supplied XML** rather than server-rebuilt UBL, so a tenant clerk can sign a document whose line items, parties, and totals do not match the DB record; (b) `SigningModule` unconditionally binds `LocalSigner` (software RSA key in `/tmp`) with no `NODE_ENV=production` guard; and (c) the clearance callback path (`handleCallback`) has no HMAC/mTLS verification planned yet, and keys the invoice lookup on a bare `asp_reference` string, which permits state-flip injection once an HTTP route is exposed. These are expected Wave-3 gaps but each must be closed before the first production tenant lands.
 
 ---
 
@@ -17,12 +17,12 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
 
 | # | Boundary | Enforcement | Notes |
 |---|---|---|---|
-| B1 | **Tenant ↔ tenant** | Postgres FORCE RLS keyed on `current_setting('app.tenant_id')` set per-tx by `withTenant()`. | Every tenant-scoped table carries RLS. `fawtara_app` role has no `BYPASSRLS`. See SEC-001 for the one deliberate exception. |
+| B1 | **Tenant ↔ tenant** | Postgres FORCE RLS keyed on `current_setting('app.tenant_id')` set per-tx by `withTenant()`. | Every tenant-scoped table carries RLS. `faatora_app` role has no `BYPASSRLS`. See SEC-001 for the one deliberate exception. |
 | B2 | **Public internet ↔ tenant data** (leads) | `/api/leads` is unauthenticated; `leads` table has no RLS and no tenant linkage. | DTO validation only. See SEC-003. |
 | B3 | **Accountant console ↔ tenant data** | `AccountantAuthGuard` resolves user; service layer re-queries `memberships` under each tenant's RLS context for each cross-tenant read. | Correct pattern. `accountant_firms` + `accountant_client_links` tables themselves have NO RLS (SEC-013). |
 | B4 | **API ↔ ASP** (clearance) | Outgoing: `TransmissionProvider` port — Wave 3 uses `StubAspProvider` (in-process). Incoming: `handleCallback` has no HTTP route yet. | SEC-002: when the webhook lands it needs HMAC + an ASP-provided nonce. |
-| B5 | **App process memory ↔ local signer key** | File at `/tmp/fawtara-dev-signing.pem` mode `0o600`; held in-memory as `forge.pki.rsa.PrivateKey`. | SEC-004: `LocalSigner` is bound even in production. |
-| B6 | **Archive storage ↔ operators** | Prod: S3 Object Lock COMPLIANCE + KMS SSE + bucket-public-block. Dev: filesystem mode `0o400` + `wx` immutability flag. | SEC-011: `/tmp/fawtara-archive` dev default is world-readable to processes with the same UID. |
+| B5 | **App process memory ↔ local signer key** | File at `/tmp/faatora-dev-signing.pem` mode `0o600`; held in-memory as `forge.pki.rsa.PrivateKey`. | SEC-004: `LocalSigner` is bound even in production. |
+| B6 | **Archive storage ↔ operators** | Prod: S3 Object Lock COMPLIANCE + KMS SSE + bucket-public-block. Dev: filesystem mode `0o400` + `wx` immutability flag. | SEC-011: `/tmp/faatora-archive` dev default is world-readable to processes with the same UID. |
 | B7 | **Migration pool ↔ RLS** | `MIGRATION_DATABASE_URL` is a superuser URL used by `ClearanceGatewayService.sweepCandidates()` for a cross-tenant SELECT (returns only `(id, tenant_id)`), and by `findInvoiceByAspReference()`. | SEC-001: narrow projection is correct, but the fallback to `DATABASE_URL` and lack of a bypass-check sentinel are footguns. |
 
 ---
@@ -50,12 +50,12 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
   - `apps/api/src/modules/signing/signing.module.ts`
   - `apps/api/src/modules/signing/local-signer.ts`
   - `apps/api/src/modules/signing/kms-signer.ts`
-- **Description:** `SigningModule` wires `{ provide: SIGNER, useClass: LocalSigner }` with no `NODE_ENV` guard. `LocalSigner` persists a 2048-bit RSA private key to `/tmp/fawtara-dev-signing.pem` on first use, with `0o600`. `KmsSigner` exists but every method throws "Not yet implemented". If a prod deployment ships `signing.module.ts` as-is, every invoice is signed with a software key living in a world-writable directory, which fails any OTA accreditation audit and lets any co-tenant on the host read it.
+- **Description:** `SigningModule` wires `{ provide: SIGNER, useClass: LocalSigner }` with no `NODE_ENV` guard. `LocalSigner` persists a 2048-bit RSA private key to `/tmp/faatora-dev-signing.pem` on first use, with `0o600`. `KmsSigner` exists but every method throws "Not yet implemented". If a prod deployment ships `signing.module.ts` as-is, every invoice is signed with a software key living in a world-writable directory, which fails any OTA accreditation audit and lets any co-tenant on the host read it.
 - **Exploitability:** No exploit required — this is a build-time latent default. The file-mode `0o600` protects only against other UIDs; `/tmp` on shared container runtimes often collapses UIDs. The chain-of-custody for signed invoices then has no HSM root.
 - **Remediation:**
-  1. In `signing.module.ts`, choose provider by `NODE_ENV`: `useClass: isProd ? KmsSigner : LocalSigner`, and throw at module boot if `isProd && !process.env.FAWTARA_SIGNING_KMS_KEY_ID`.
+  1. In `signing.module.ts`, choose provider by `NODE_ENV`: `useClass: isProd ? KmsSigner : LocalSigner`, and throw at module boot if `isProd && !process.env.FAATORA_SIGNING_KMS_KEY_ID`.
   2. Finish `KmsSigner` wiring against the already-provisioned `aws_kms_key.signing` (RSA_2048 SIGN_VERIFY, `RSASSA_PKCS1_V1_5_SHA_256`).
-  3. Move the dev key path to `FAWTARA_DEV_SIGNING_PEM` env with a per-worktree default; refuse to write to `/tmp` when `NODE_ENV!==development`.
+  3. Move the dev key path to `FAATORA_DEV_SIGNING_PEM` env with a per-worktree default; refuse to write to `/tmp` when `NODE_ENV!==development`.
 
 #### SEC-003 — Clearance callback is replay- and injection-trivial once exposed
 - **Severity:** CRITICAL (promoted from HIGH because this will land Wave 3 and the gateway already sinks verdicts)
@@ -71,11 +71,11 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
 
 ### HIGH
 
-#### SEC-004 — `fawtara_app` role password hardcoded in migration
+#### SEC-004 — `faatora_app` role password hardcoded in migration
 - **Severity:** HIGH
 - **File:** `apps/api/migrations/1710000000000_init.cjs`
-- **Description:** The role is created with literal `PASSWORD 'fawtara_app'`. The sample `.env` reuses it: `DATABASE_URL=postgres://fawtara_app:fawtara_app@localhost:5432/fawtara`. Any environment that forgets to `ALTER ROLE … PASSWORD` post-migrate ships with a known password.
-- **Remediation:** Create the role without a password in the migration (`CREATE ROLE fawtara_app LOGIN;`) and rotate the password out-of-band in each environment via SSM / RDS-managed-password; fail boot if `DATABASE_URL`'s password equals the role name.
+- **Description:** The role is created with literal `PASSWORD 'faatora_app'`. The sample `.env` reuses it: `DATABASE_URL=postgres://faatora_app:faatora_app@localhost:5432/faatora`. Any environment that forgets to `ALTER ROLE … PASSWORD` post-migrate ships with a known password.
+- **Remediation:** Create the role without a password in the migration (`CREATE ROLE faatora_app LOGIN;`) and rotate the password out-of-band in each environment via SSM / RDS-managed-password; fail boot if `DATABASE_URL`'s password equals the role name.
 
 #### SEC-005 — Public leads endpoint has no rate limiting; weak phone validation; PII capture
 - **Severity:** HIGH
@@ -90,10 +90,10 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
 #### SEC-006 — `MIGRATION_DATABASE_URL` fallback silently defeats RLS
 - **Severity:** HIGH
 - **File:** `apps/api/src/modules/clearance/clearance-gateway.service.ts` (`getSweepPool`)
-- **Description:** `getSweepPool()` falls back to `DATABASE_URL` when `MIGRATION_DATABASE_URL` is unset. In environments where someone one-day grants `BYPASSRLS` to `fawtara_app` (not currently done — but there is no CI guard against it), the sweep then runs as the app role AND bypasses RLS. The sweep SELECTs only `(id, tenant_id)` today, but any later schema change that widens the projection would quietly leak across tenants under that fallback.
+- **Description:** `getSweepPool()` falls back to `DATABASE_URL` when `MIGRATION_DATABASE_URL` is unset. In environments where someone one-day grants `BYPASSRLS` to `faatora_app` (not currently done — but there is no CI guard against it), the sweep then runs as the app role AND bypasses RLS. The sweep SELECTs only `(id, tenant_id)` today, but any later schema change that widens the projection would quietly leak across tenants under that fallback.
 - **Remediation:**
   1. Boot-time check: refuse to start if `NODE_ENV==='production'` and `MIGRATION_DATABASE_URL` is unset.
-  2. Add a CI assertion that `pg_authid.rolbypassrls` is `false` for `fawtara_app`.
+  2. Add a CI assertion that `pg_authid.rolbypassrls` is `false` for `faatora_app`.
   3. Narrow the sweep's SQL to an explicit `SELECT id, tenant_id` with a schema-locked view, not a raw table reference.
 
 #### SEC-007 — Accountant tables are not RLS-protected; reseller commissions readable cross-firm
@@ -115,11 +115,11 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
   1. Extend `redact` to `['req.headers.authorization', 'req.headers.cookie', 'req.body.password', 'req.body.ublXml', 'req.body.base64', '*.vatin', '*.email', '*.phone']` with `remove: false` so the shape is preserved.
   2. Add a review checklist entry: no new fields logged without a redaction entry.
 
-#### SEC-009 — Archive filesystem adapter default path is `/tmp/fawtara-archive`
+#### SEC-009 — Archive filesystem adapter default path is `/tmp/faatora-archive`
 - **Severity:** MEDIUM (dev-only; CRITICAL if ever enabled in prod)
 - **File:** `apps/api/src/modules/archive/filesystem-storage.ts`
-- **Description:** `baseDir` falls back to `/tmp/fawtara-archive`. Mode `0o400` prevents overwrite but a sibling process with the same UID can `chmod` and overwrite — the hash chain in `archiveRecords.chainHash` would catch tampering at verify-time, but the archived payload itself could be lost. Also `/tmp` is reaped on reboot in some container runtimes.
-- **Remediation:** Refuse to boot the filesystem adapter when `NODE_ENV==='production'`. Default `FAWTARA_ARCHIVE_DIR` to a project-local dir under the app user's home in dev.
+- **Description:** `baseDir` falls back to `/tmp/faatora-archive`. Mode `0o400` prevents overwrite but a sibling process with the same UID can `chmod` and overwrite — the hash chain in `archiveRecords.chainHash` would catch tampering at verify-time, but the archived payload itself could be lost. Also `/tmp` is reaped on reboot in some container runtimes.
+- **Remediation:** Refuse to boot the filesystem adapter when `NODE_ENV==='production'`. Default `FAATORA_ARCHIVE_DIR` to a project-local dir under the app user's home in dev.
 
 #### SEC-010 — Guard rejects on `authorization` header, but not on token re-use after membership drop
 - **Severity:** MEDIUM
@@ -173,7 +173,7 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
 #### SEC-018 — QR payload supplier VATIN is intentional; no PII beyond invoice metadata
 - **Severity:** INFORMATIONAL
 - **File:** `apps/api/src/modules/signing/qr.ts`
-- **Description:** `FawtaraQrPayload` includes `uuid, n, d, gt, vt, svat`. The supplier VATIN is required by the OTA interim spec. No buyer VATIN, no bank details, no addresses leak into the QR. Confirmed safe.
+- **Description:** `FaatoraQrPayload` includes `uuid, n, d, gt, vt, svat`. The supplier VATIN is required by the OTA interim spec. No buyer VATIN, no bank details, no addresses leak into the QR. Confirmed safe.
 
 ---
 
@@ -187,7 +187,7 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
 | **Server-rebuilt UBL (invoice integrity)** | **NOT MET.** `POST /invoices/:id/sign` signs attacker-supplied XML. | SEC-001 — must rebuild server-side from DB rows before signing. |
 | **Key rotation runbook** | KMS asymmetric key has `enable_key_rotation=false` (AWS limitation — asymmetric CMKs do not rotate automatically). A7 stub only. | Document a manual, dual-signed key-rotation runbook with cutover + verification steps before accreditation. |
 | **ASP accreditation (white-label consumer)** | Wave-3 stub ASP wired in-process via `StubAspProvider`. | Needs: HMAC-verified callback (SEC-003), ASP vendor name on the audit trail, PINT-OM profile sign-off before the stub flips to real. |
-| **Audit log immutability** | `clearance_events` is append-only in service code; no DB trigger preventing UPDATE/DELETE. `fawtara_app` has `UPDATE, DELETE` grant. | Add trigger `clearance_events_no_update_delete` and revoke `UPDATE, DELETE` on `clearance_events` from `fawtara_app`. |
+| **Audit log immutability** | `clearance_events` is append-only in service code; no DB trigger preventing UPDATE/DELETE. `faatora_app` has `UPDATE, DELETE` grant. | Add trigger `clearance_events_no_update_delete` and revoke `UPDATE, DELETE` on `clearance_events` from `faatora_app`. |
 | **MFA for operators** | Cognito `mfa_configuration = var.mfa_configuration` (variable, not pinned ON). | Pin `mfa_configuration = "ON"` for the accountant pool before go-live. |
 | **Breach-notification SLA (OTA 72h)** | No runbook. | Author `docs/runbooks/breach-notification.md`. |
 
@@ -197,17 +197,17 @@ Fawtara's RLS-first tenancy model is sound: every tenant-scoped table uses `FORC
 
 | ID | Action | Owner | Effort | Hard dependency |
 |---|---|---|---|---|
-| **PP-1** | SEC-001: rebuild UBL server-side; remove `ublXml` from `SignInvoiceDto`. | Signing team (A4) | 2 days | Compliance builder (@fawtara/compliance) finished — blocks PP-2 |
+| **PP-1** | SEC-001: rebuild UBL server-side; remove `ublXml` from `SignInvoiceDto`. | Signing team (A4) | 2 days | Compliance builder (@faatora/compliance) finished — blocks PP-2 |
 | **PP-2** | SEC-002: wire `KmsSigner`; gate `signing.module.ts` provider on `NODE_ENV`. | Platform | 1 day | PP-1 (shared signer surface) |
 | **PP-3** | SEC-003: design + ship ASP callback HTTP controller with HMAC verification + `clearance_callbacks_seen` dedupe table. | Clearance (A14) | 3 days | ASP vendor selection |
-| **PP-4** | SEC-004: parameterize `fawtara_app` password via SSM; add boot-time refusal if password equals role name. | Platform | 4h | Secrets-manager runbook |
+| **PP-4** | SEC-004: parameterize `faatora_app` password via SSM; add boot-time refusal if password equals role name. | Platform | 4h | Secrets-manager runbook |
 | **PP-5** | SEC-005: add `@nestjs/throttler` to leads route; fix phone regex; set `trust proxy`; add WAF rate rule. | Growth/Platform | 1 day | — |
 | **PP-6** | SEC-006: fail boot in prod if `MIGRATION_DATABASE_URL` unset; add CI assertion for `rolbypassrls=false`. | Platform | 4h | — |
 | **PP-7** | SEC-007: add RLS to accountant tables keyed on `app.user_id`; or an eslint rule flagging bare `select().from(accountantClientLinks)`. | Accountant (A12) | 1 day | — |
 | **PP-8** | SEC-008: extend pino `redact` list; add logging-review entry to PR template. | Platform | 2h | — |
-| **PP-9** | SEC-009: refuse `FilesystemStorage` in prod; default dev path to `~/.fawtara/archive`. | Archive (A13) | 2h | — |
+| **PP-9** | SEC-009: refuse `FilesystemStorage` in prod; default dev path to `~/.faatora/archive`. | Archive (A13) | 2h | — |
 | **PP-10** | SEC-013: boot-time `AWS_REGION` guard + Terraform validation. | Platform/Infra | 4h | — |
-| **PP-11** | Add DB trigger + revoke `UPDATE,DELETE` on `clearance_events` from `fawtara_app`. | DBA | 4h | — |
+| **PP-11** | Add DB trigger + revoke `UPDATE,DELETE` on `clearance_events` from `faatora_app`. | DBA | 4h | — |
 | **PP-12** | Pin Cognito `mfa_configuration = "ON"` in Terraform; document enrolment flow. | Infra | 2h | — |
 | **PP-13** | Author key-rotation runbook (`docs/runbooks/key-rotation.md`) + breach-notification runbook (72h OTA SLA). | Security | 1 day | — |
 | **PP-14** | SEC-016: gate `POST /clearance/drain` on `role==='owner'`. | Clearance | 1h | — |

@@ -51,10 +51,10 @@ describe('AuditService (EP5 W2-E)', () => {
         `stranger-${strangerU}@test`,
       ],
     );
-    await admin.query(
-      `INSERT INTO tenants (id, name) VALUES ($1,'AuditT One'),($2,'AuditT Two')`,
-      [tA, tB],
-    );
+    await admin.query(`INSERT INTO tenants (id, name) VALUES ($1,'AuditT One'),($2,'AuditT Two')`, [
+      tA,
+      tB,
+    ]);
 
     appPool = new Pool({ connectionString: APP_URL });
     const appDb = drizzle(appPool, { schema });

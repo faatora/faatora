@@ -29,7 +29,7 @@ exports.up = (pgm) => {
   pgm.createIndex('archive_records', ['tenant_id', 'archived_at'], {
     name: 'archive_records_tenant_archived_idx',
   });
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE ON archive_records TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE ON archive_records TO faatora_app;`);
   pgm.sql(`ALTER TABLE archive_records ENABLE ROW LEVEL SECURITY;`);
   pgm.sql(`ALTER TABLE archive_records FORCE ROW LEVEL SECURITY;`);
   pgm.sql(

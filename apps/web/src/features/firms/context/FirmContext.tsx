@@ -110,7 +110,9 @@ export function FirmContextProvider({ children, loadOnMount = true }: FirmContex
 
   const value = useMemo<FirmContextValue>(() => {
     const active =
-      activeFirmId != null ? (firmList.find((m) => m.firm.id === activeFirmId)?.firm ?? null) : null;
+      activeFirmId != null
+        ? (firmList.find((m) => m.firm.id === activeFirmId)?.firm ?? null)
+        : null;
     return {
       activeFirm: active,
       firmList,

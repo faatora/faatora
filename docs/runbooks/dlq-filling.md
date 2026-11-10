@@ -4,21 +4,21 @@
 
 ## Symptoms
 
-- `fawtara_clearance_dlq_size > 0` — the gauge is zero when the DLQ table is empty, so any non-zero value fires.
-- Fast fill: `increase(fawtara_clearance_dlq_size[10m]) > 5` means multiple invoices failed within a short window — usually a systemic issue, not individual bad data.
+- `faatora_clearance_dlq_size > 0` — the gauge is zero when the DLQ table is empty, so any non-zero value fires.
+- Fast fill: `increase(faatora_clearance_dlq_size[10m]) > 5` means multiple invoices failed within a short window — usually a systemic issue, not individual bad data.
 
 ## Detection
 
 - **Alert rule.**
-  - P1: `fawtara_clearance_dlq_size > 0 for 5m`.
-  - P1 fast-fill: `increase(fawtara_clearance_dlq_size[10m]) > 5`.
+  - P1: `faatora_clearance_dlq_size > 0 for 5m`.
+  - P1 fast-fill: `increase(faatora_clearance_dlq_size[10m]) > 5`.
 - **Log signal.** Pino lines with `event=clearance.dlq.insert`, carrying `invoice_id`, `outbox_id`, `attempts`, `error`.
 
 ## Triage flowchart
 
 ```
                            +-----------------------------+
-                           |  fawtara_clearance_dlq_size |
+                           |  faatora_clearance_dlq_size |
                            |          non-zero           |
                            +--------------+--------------+
                                           |

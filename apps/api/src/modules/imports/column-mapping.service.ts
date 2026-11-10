@@ -134,10 +134,7 @@ export class ColumnMappingService {
     return { ...DEFAULT_MAPPINGS[sourceFormat] };
   }
 
-  async getForFirm(
-    firmId: string,
-    sourceFormat: ImportSourceFormat,
-  ): Promise<ColumnMapping> {
+  async getForFirm(firmId: string, sourceFormat: ImportSourceFormat): Promise<ColumnMapping> {
     const rows = await withFirm(this.db, firmId, (tx) =>
       tx
         .select()

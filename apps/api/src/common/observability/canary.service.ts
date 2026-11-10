@@ -14,15 +14,15 @@ import { canaryLastSuccessTimestamp } from './metrics';
  *   1. DATABASE connectivity — `SELECT 1` against the main app pool.
  *      Catches: pool exhaustion, RLS mis-config, dropped network.
  *
- *   2. COMPLIANCE CORE — if `@fawtara/compliance` can be imported in
+ *   2. COMPLIANCE CORE — if `@faatora/compliance` can be imported in
  *      this process, we build a canonical fixture and run it through
  *      `validateCanonical`. Catches: a bad deploy of the rule pack,
  *      a type-shape drift between apps/api and packages/compliance.
  *
  * On any failure we log a structured error with `canary_name` and emit
  * a `page` alert (the SRE wake-up signal). On success we stamp
- * `fawtara_canary_last_success_timestamp` so Prometheus can alert on
- * `time() - fawtara_canary_last_success_timestamp > 300`.
+ * `faatora_canary_last_success_timestamp` so Prometheus can alert on
+ * `time() - faatora_canary_last_success_timestamp > 300`.
  *
  * SCHEDULING. `@nestjs/schedule`'s @Cron fires on a six-field spec; we
  * run every 60 s. An `isRunning` flag drops overlapping ticks so a
@@ -97,13 +97,13 @@ export class CanaryService {
       validateCanonical: (v: unknown) => { ok: boolean; errors?: unknown };
     };
     try {
-      compliance = await import('@fawtara/compliance');
+      compliance = await import('@faatora/compliance');
     } catch {
       if (!this.complianceSkippedWarned) {
         this.complianceSkippedWarned = true;
         this.log.warn(
           { canary_name: 'compliance_core' },
-          '@fawtara/compliance not importable in this environment — skipping canary layer',
+          '@faatora/compliance not importable in this environment — skipping canary layer',
         );
       }
       return true;
@@ -116,12 +116,12 @@ export class CanaryService {
       issueDate: new Date().toISOString().slice(0, 10),
       currency: 'OMR',
       supplier: {
-        name: 'Fawtara Canary Supplier',
+        name: 'Faatora Canary Supplier',
         country: 'OM',
         vatin: 'OM1234567890',
       },
       buyer: {
-        name: 'Fawtara Canary Buyer',
+        name: 'Faatora Canary Buyer',
         country: 'OM',
       },
       lines: [

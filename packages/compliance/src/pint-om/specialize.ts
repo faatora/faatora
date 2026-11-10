@@ -16,7 +16,7 @@ import type { PintOmInvoice, PintOmParty } from './types.js';
 
 /**
  * The scheme identifier we use for Oman tax-registered parties.
- * Mirrors the `OM:VAT` convention used elsewhere in Fawtara (JWS
+ * Mirrors the `OM:VAT` convention used elsewhere in Faatora (JWS
  * subject claims, Peppol participant endpoints).
  */
 export const OM_VAT_SCHEME = 'OM:VAT';

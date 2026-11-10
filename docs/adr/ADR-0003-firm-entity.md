@@ -8,7 +8,7 @@
 
 ## Context
 
-Fawtara is pivoting from direct-to-SME to accountant-aggregator. One product, two sides: a micro-SME tenant with a low-ARPU retail subscription, and an accounting firm operating a per-seat subscription that lets a single accountant service 20–100 client tenants from one console. EP4 shipped a lightweight `accountant_firms` table built for a single-owner commission-tracking need; it is not a basis for the accountant-aggregator surface because it does not model (a) multiple members per firm with roles, (b) first-class engagement metadata between the firm and each client tenant, or (c) a context-propagation story strong enough to isolate firms from one another at the database layer.
+Faatora is pivoting from direct-to-SME to accountant-aggregator. One product, two sides: a micro-SME tenant with a low-ARPU retail subscription, and an accounting firm operating a per-seat subscription that lets a single accountant service 20–100 client tenants from one console. EP4 shipped a lightweight `accountant_firms` table built for a single-owner commission-tracking need; it is not a basis for the accountant-aggregator surface because it does not model (a) multiple members per firm with roles, (b) first-class engagement metadata between the firm and each client tenant, or (c) a context-propagation story strong enough to isolate firms from one another at the database layer.
 
 EP5 Wave 1 lays the foundation so Wave 2 can build the dashboard, batch invoice ops, firm billing and firm-scoped audit log against a stable schema and context model. The scope is deliberately narrow: schema, RLS, context-propagation wrappers, FirmGuard, bare service CRUD, and tests. No UI, no batch ops, no consolidated KPIs.
 
@@ -16,7 +16,7 @@ EP5 Wave 1 lays the foundation so Wave 2 can build the dashboard, batch invoice 
 
 ### D1. Firm is a first-class aggregate with four new tables
 
-We introduce `firms`, `firm_memberships`, `firm_client_tenants` and `firm_invitations`. The last is not in the Wave 1 required-tables list but is needed to make `inviteMember(firmId, email, role)` / `acceptInvitation(token)` work end-to-end: the invitee may not yet have a Fawtara `users` row and the token has to be stored durably.
+We introduce `firms`, `firm_memberships`, `firm_client_tenants` and `firm_invitations`. The last is not in the Wave 1 required-tables list but is needed to make `inviteMember(firmId, email, role)` / `acceptInvitation(token)` work end-to-end: the invitee may not yet have a Faatora `users` row and the token has to be stored durably.
 
 The firm/tenant relationship is a soft-deletable link: `firm_client_tenants` has `created_at` / `revoked_at`. A partial unique index `(tenant_id) WHERE revoked_at IS NULL` enforces the Wave 1 invariant that **a tenant may be actively engaged by only one firm at a time**. Historical links are retained — a tenant can move between firms over time by revoking then adding. Firm memberships follow the same soft-delete pattern with a partial `(firm_id, user_id) WHERE revoked_at IS NULL` unique index, so re-adding a previously-revoked user works out of the box.
 
@@ -26,7 +26,7 @@ The firm/tenant relationship is a soft-deletable link: `firm_client_tenants` has
 
 The firm-console runs with a new session parameter `app.firm_id` set via `SET LOCAL` inside the `withFirm` transaction wrapper, mirroring exactly how `app.tenant_id` and the existing `withTenant` work. This is parallel, additive context — a handler can hold both `app.firm_id` and `app.tenant_id` simultaneously when the firm user has switched into one specific client (`withFirmTenant`), or just `app.firm_id` when reading the firm itself or running a cross-tenant SELECT against the ADR-0003 D4 branch.
 
-Non-BYPASSRLS `fawtara_app` role is the floor: every policy is `FORCE ROW LEVEL SECURITY`, no application code can side-step it even by accident.
+Non-BYPASSRLS `faatora_app` role is the floor: every policy is `FORCE ROW LEVEL SECURITY`, no application code can side-step it even by accident.
 
 ### D3. RLS on the four new tables keyed on `app.firm_id`, hardened with `NULLIF`
 

@@ -18,7 +18,7 @@ import {
   type ClientTenantRecord,
   type CreateClientTenantInput,
 } from '../api/clients';
-import { mapCsvRows, parseCsv, type CsvMappedRow } from '../components/csvParser';
+import { mapCsvRows, parseCsv } from '../components/csvParser';
 
 type Mode = 'single' | 'batch';
 
@@ -77,9 +77,7 @@ function ModeButton(props: { active: boolean; onClick: () => void; label: string
       type="button"
       onClick={props.onClick}
       className={`ps-4 pe-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-        props.active
-          ? 'bg-indigo-600 text-white'
-          : 'text-slate-700 hover:bg-slate-100'
+        props.active ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'
       }`}
     >
       {props.label}
@@ -142,10 +140,7 @@ function SingleOnboardForm({
 
   if (success) {
     return (
-      <div
-        role="status"
-        className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-6"
-      >
+      <div role="status" className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
         <p className="text-start text-sm font-semibold text-emerald-900">
           {t('clients.wizard.single.success', { name: success.tenantName })}
         </p>
@@ -218,9 +213,7 @@ function SingleOnboardForm({
           id="accessLevel"
           label={t('clients.wizard.single.accessLevel')}
           value={form.accessLevel}
-          onChange={(v) =>
-            setForm({ ...form, accessLevel: v as 'full' | 'read_only' })
-          }
+          onChange={(v) => setForm({ ...form, accessLevel: v as 'full' | 'read_only' })}
           options={[
             { v: 'full', l: t('clients.wizard.single.accessLevel.full') },
             { v: 'read_only', l: t('clients.wizard.single.accessLevel.readOnly') },
@@ -230,9 +223,7 @@ function SingleOnboardForm({
           id="engagementType"
           label={t('clients.wizard.single.engagementType')}
           value={form.engagementType}
-          onChange={(v) =>
-            setForm({ ...form, engagementType: v as 'ongoing' | 'periodic' })
-          }
+          onChange={(v) => setForm({ ...form, engagementType: v as 'ongoing' | 'periodic' })}
           options={[
             { v: 'ongoing', l: t('clients.wizard.single.engagementType.ongoing') },
             { v: 'periodic', l: t('clients.wizard.single.engagementType.periodic') },
@@ -274,9 +265,10 @@ function BatchOnboardForm({
   const { t } = useTranslation();
   const [csvText, setCsvText] = useState('');
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<
-    { created: ClientTenantRecord[]; failed: BatchOnboardFailure[] } | null
-  >(null);
+  const [result, setResult] = useState<{
+    created: ClientTenantRecord[];
+    failed: BatchOnboardFailure[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const parsed = useMemo(() => {
@@ -285,14 +277,8 @@ function BatchOnboardForm({
     return mapCsvRows(rows);
   }, [csvText]);
 
-  const validRows = useMemo(
-    () => (parsed ?? []).filter((r) => r._errors.length === 0),
-    [parsed],
-  );
-  const invalidRows = useMemo(
-    () => (parsed ?? []).filter((r) => r._errors.length > 0),
-    [parsed],
-  );
+  const validRows = useMemo(() => (parsed ?? []).filter((r) => r._errors.length === 0), [parsed]);
+  const invalidRows = useMemo(() => (parsed ?? []).filter((r) => r._errors.length > 0), [parsed]);
 
   const onFile = useCallback(async (file: File) => {
     const text = await file.text();
@@ -371,9 +357,7 @@ function BatchOnboardForm({
         }}
         className="mt-2 block text-start text-sm text-slate-700"
       />
-      <p className="mt-2 text-start text-xs text-slate-500">
-        {t('clients.wizard.batch.fileHint')}
-      </p>
+      <p className="mt-2 text-start text-xs text-slate-500">{t('clients.wizard.batch.fileHint')}</p>
 
       <label
         htmlFor="csv-text"
@@ -464,10 +448,7 @@ function Field(props: {
 }) {
   return (
     <div>
-      <label
-        htmlFor={props.id}
-        className="block text-start text-sm font-medium text-slate-800"
-      >
+      <label htmlFor={props.id} className="block text-start text-sm font-medium text-slate-800">
         {props.label}
       </label>
       <input
@@ -490,10 +471,7 @@ function SelectField(props: {
 }) {
   return (
     <div>
-      <label
-        htmlFor={props.id}
-        className="block text-start text-sm font-medium text-slate-800"
-      >
+      <label htmlFor={props.id} className="block text-start text-sm font-medium text-slate-800">
         {props.label}
       </label>
       <select

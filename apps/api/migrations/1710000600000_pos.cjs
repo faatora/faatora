@@ -70,7 +70,7 @@ exports.up = (pgm) => {
     primaryKey: ['tenant_id', 'scope', 'bucket'],
   });
 
-  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO faatora_app;`);
 
   for (const tbl of ['products', 'pos_sales', 'pos_sale_lines', 'pos_number_sequences']) {
     pgm.sql(`ALTER TABLE ${tbl} ENABLE ROW LEVEL SECURITY;`);

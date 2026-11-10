@@ -52,7 +52,7 @@ describe('shared api client', () => {
   });
 
   it('adds Authorization bearer when a token is in localStorage', async () => {
-    localStorage.setItem('fawtara_access_token', 'tok-abc');
+    localStorage.setItem('faatora_access_token', 'tok-abc');
     const spy = mockFetchOnce({ body: { ok: true } });
     await apiGet('/anything');
     const headers = spy.mock.calls[0][1]?.headers as Record<string, string>;

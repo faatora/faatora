@@ -33,10 +33,7 @@ import { withFirm } from '../../db/with-firm';
 import { firmClientTenants } from '../../db/schema/firms';
 import { invoices, parties } from '../../db/schema/invoicing';
 import { importBatches } from '../../db/schema/firm-imports';
-import {
-  ColumnMappingService,
-  type ColumnMapping,
-} from './column-mapping.service';
+import { ColumnMappingService, type ColumnMapping } from './column-mapping.service';
 import {
   isImportSourceFormat,
   type ImportSourceFormat,
@@ -112,10 +109,7 @@ function verifyToken(token: string): string | null {
   return diff === 0 ? id : null;
 }
 
-export function computeRowHash(
-  sourceFormat: ImportSourceFormat,
-  row: ParsedImportRow,
-): string {
+export function computeRowHash(sourceFormat: ImportSourceFormat, row: ParsedImportRow): string {
   const payload = [
     sourceFormat,
     row.invoiceNumber,
@@ -260,7 +254,6 @@ export class FirmImportsService {
     }
 
     // Save the edited mapping for future imports if requested.
-    const mappingUsed = editedMapping ?? snap.mapping;
     if (saveMapping && editedMapping) {
       await this.mappings.saveForFirm(firmId, snap.sourceFormat, editedMapping);
     }

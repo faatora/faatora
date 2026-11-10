@@ -8,7 +8,7 @@ import {
   type CanonicalInvoice,
   type InvoiceType,
   type VatCategory,
-} from '@fawtara/compliance';
+} from '@faatora/compliance';
 import { DB, type Database } from '../../db/db.module';
 import { withTenant } from '../../db/with-tenant';
 import { invoices, invoiceLines, parties } from '../../db/schema/invoicing';

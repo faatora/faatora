@@ -29,7 +29,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@fawtara/compliance':
+      '@faatora/compliance':
         specifier: workspace:*
         version: link:../../packages/compliance
       '@nestjs/common':

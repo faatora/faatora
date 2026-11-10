@@ -49,7 +49,7 @@ export const ZOHO_BOOKS_CANONICAL_HEADERS = [
 ];
 
 function normalizeHeader(h: string): string {
-  return h.replace(/﻿/g, '').trim();
+  return h.replace(/\uFEFF/g, '').trim();
 }
 
 function toNumber(raw: string | undefined): number {
@@ -61,7 +61,7 @@ function toNumber(raw: string | undefined): number {
 }
 
 export async function parseZohoBooksCsv(buffer: Buffer): Promise<RawParseResult> {
-  const text = buffer.toString('utf-8').replace(/^﻿/, '');
+  const text = buffer.toString('utf-8').replace(/^\uFEFF/, '');
   const errors: RowError[] = [];
   if (text.trim().length === 0) {
     errors.push({ sourceRowNo: 0, message: 'CSV is empty' });
@@ -112,12 +112,7 @@ export async function parseZohoBooksCsv(buffer: Buffer): Promise<RawParseResult>
     invoiceDate: (row['Invoice Date'] ?? '').toString().trim(),
     customerName: (row['Customer Name'] ?? '').toString().trim(),
     customerId: (row['Customer ID'] ?? '').toString().trim(),
-    customerVatin: (
-      row['Customer VATIN'] ??
-      row['Customer Tax ID'] ??
-      row['CustomerTaxID'] ??
-      ''
-    )
+    customerVatin: (row['Customer VATIN'] ?? row['Customer Tax ID'] ?? row['CustomerTaxID'] ?? '')
       .toString()
       .trim(),
     itemName: (row['Item Name'] ?? '').toString().trim(),

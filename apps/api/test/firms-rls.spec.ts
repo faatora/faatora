@@ -3,7 +3,7 @@
  * firm_memberships, firm_client_tenants) and for the invoice/party
  * SELECT branch added in migration 1710001300000_firm_invoice_rls_branch.
  *
- * All queries here run under the non-BYPASSRLS `fawtara_app` role (via
+ * All queries here run under the non-BYPASSRLS `faatora_app` role (via
  * DATABASE_URL). The admin pool (MIGRATION_DATABASE_URL) is used only
  * for seeding fixtures. If the two URLs point to the same role in a
  * dev setup, the admin-side seeding still works but the app-side
@@ -49,10 +49,10 @@ describe('RLS on firm-scoped tables', () => {
       [ownerA, `sub-${ownerA}`, 'ownerA@test', ownerB, `sub-${ownerB}`, 'ownerB@test'],
     );
     await admin.query(`INSERT INTO tenants (id, name) VALUES ($1,'TA'),($2,'TB')`, [tA, tB]);
-    await admin.query(
-      `INSERT INTO firms (id, name) VALUES ($1,'Firm A'),($2,'Firm B')`,
-      [firmAId, firmBId],
-    );
+    await admin.query(`INSERT INTO firms (id, name) VALUES ($1,'Firm A'),($2,'Firm B')`, [
+      firmAId,
+      firmBId,
+    ]);
     await admin.query(
       `INSERT INTO firm_memberships (firm_id, user_id, role) VALUES ($1,$2,'owner'),($3,$4,'owner')`,
       [firmAId, ownerA, firmBId, ownerB],
@@ -113,9 +113,7 @@ describe('RLS on firm-scoped tables', () => {
     it('firm A context cannot INSERT a membership into firm B', async () => {
       await expect(
         withFirm(appDb, firmAId, (tx) =>
-          tx
-            .insert(firmMemberships)
-            .values({ firmId: firmBId, userId: ownerA, role: 'partner' }),
+          tx.insert(firmMemberships).values({ firmId: firmBId, userId: ownerA, role: 'partner' }),
         ),
       ).rejects.toThrow();
     });
@@ -199,7 +197,10 @@ describe('RLS on firm-scoped tables', () => {
       });
       // Confirm the row is readable under tenant A context via withTenant.
       const rows = await withTenant(appDb, tA, (tx) =>
-        tx.select().from(parties).where(and(eq(parties.id, newParty), eq(parties.tenantId, tA))),
+        tx
+          .select()
+          .from(parties)
+          .where(and(eq(parties.id, newParty), eq(parties.tenantId, tA))),
       );
       expect(rows).toHaveLength(1);
       // Cleanup

@@ -84,14 +84,8 @@ export class AuditService {
     return this.mapRow(inserted);
   }
 
-  async list(
-    firmId: string,
-    opts: ListAuditEventsOptions = {},
-  ): Promise<FirmAuditEvent[]> {
-    const limit = Math.min(
-      Math.max(1, opts.limit ?? 50),
-      AuditService.MAX_LIST_LIMIT,
-    );
+  async list(firmId: string, opts: ListAuditEventsOptions = {}): Promise<FirmAuditEvent[]> {
+    const limit = Math.min(Math.max(1, opts.limit ?? 50), AuditService.MAX_LIST_LIMIT);
     return withFirm(this.db, firmId, async (tx) => {
       const filters = [eq(firmAuditEvents.firmId, firmId)];
       if (opts.since) {

@@ -7,7 +7,7 @@ import type { Signer } from '../src/modules/signing/signer.port';
 
 describe('LocalSigner', () => {
   const signer = new LocalSigner();
-  const payload = Buffer.from('hello fawtara', 'utf8');
+  const payload = Buffer.from('hello faatora', 'utf8');
 
   it('produces a non-empty base64 signature', async () => {
     const r = await signer.sign(payload);
@@ -140,7 +140,7 @@ function supplierFixture() {
     id: SUPPLIER_ID,
     tenantId: TENANT_ID,
     kind: 'supplier',
-    name: 'Fawtara Supplier LLC',
+    name: 'Faatora Supplier LLC',
     vatin: 'OM1234567890',
     country: 'OM',
     peppolId: null,
@@ -153,7 +153,7 @@ function buyerFixture() {
     id: BUYER_ID,
     tenantId: TENANT_ID,
     kind: 'customer',
-    name: 'Fawtara Buyer LLC',
+    name: 'Faatora Buyer LLC',
     vatin: 'OM0987654321',
     country: 'OM',
     peppolId: null,

@@ -32,10 +32,14 @@ describe('FirmsService -- client onboarding (W2-C)', () => {
 
   beforeAll(async () => {
     admin = new Pool({ connectionString: ADMIN_URL });
-    await admin.query(
-      `INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`,
-      [ownerU, `sub-${ownerU}`, ownerEmail, strangerU, `sub-${strangerU}`, strangerEmail],
-    );
+    await admin.query(`INSERT INTO users (id, cognito_sub, email) VALUES ($1,$2,$3),($4,$5,$6)`, [
+      ownerU,
+      `sub-${ownerU}`,
+      ownerEmail,
+      strangerU,
+      `sub-${strangerU}`,
+      strangerEmail,
+    ]);
 
     appPool = new Pool({ connectionString: APP_URL });
     const appDb = drizzle(appPool, { schema });

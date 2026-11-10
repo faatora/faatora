@@ -1,5 +1,5 @@
 {
-  "brand": "Fawtara",
+  "brand": "Faatora",
   "tagline": "Simple invoicing for growing businesses",
   "cta": {
     "start": "Get started"
@@ -281,7 +281,7 @@
   "imports": {
     "wizard": {
       "title": "Import invoices",
-      "subtitle": "Bring your client's existing books into Fawtara from Tally or Zoho Books.",
+      "subtitle": "Bring your client's existing books into Faatora from Tally or Zoho Books.",
       "next": "Next",
       "back": "Back",
       "commit": "Commit import",

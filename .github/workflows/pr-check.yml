@@ -18,25 +18,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20]
+        node-version: [22]
 
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: fawtara
-          POSTGRES_PASSWORD: fawtara
-          POSTGRES_DB: fawtara
+          POSTGRES_USER: faatora
+          POSTGRES_PASSWORD: faatora
+          POSTGRES_DB: faatora
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U fawtara"
+          --health-cmd "pg_isready -U faatora"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
 
     env:
-      MIGRATION_DATABASE_URL: postgres://fawtara:fawtara@localhost:5432/fawtara
-      DATABASE_URL: postgres://fawtara_app:fawtara_app@localhost:5432/fawtara
+      MIGRATION_DATABASE_URL: postgres://faatora:faatora@localhost:5432/faatora
+      DATABASE_URL: postgres://faatora_app:faatora_app@localhost:5432/faatora
       NODE_ENV: test
 
     outputs:
@@ -72,37 +72,40 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Build compliance package
+        run: pnpm --filter @faatora/compliance build
+
       - name: Lint
         run: pnpm lint
 
       - name: Typecheck (api)
-        run: pnpm --filter @fawtara/api typecheck
+        run: pnpm --filter @faatora/api typecheck
 
       - name: Typecheck (web)
-        run: pnpm --filter @fawtara/web typecheck
+        run: pnpm --filter @faatora/web typecheck
 
       - name: Migrations (ephemeral postgres)
-        run: pnpm --filter @fawtara/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+        run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
 
       - name: Compliance tests
         id: compliance
         run: |
           set +e
-          pnpm --filter @fawtara/compliance test --json --outputFile=compliance-results.json 2>&1 | tee compliance.log
+          pnpm --filter @faatora/compliance test --json --outputFile=compliance-results.json 2>&1 | tee compliance.log
           echo "exit=$?" >> "$GITHUB_OUTPUT"
 
       - name: API tests
         id: api
         run: |
           set +e
-          pnpm --filter @fawtara/api test --json --outputFile=api-results.json 2>&1 | tee api.log
+          pnpm --filter @faatora/api test --json --outputFile=api-results.json 2>&1 | tee api.log
           echo "exit=$?" >> "$GITHUB_OUTPUT"
 
       - name: Web tests
         id: web
         run: |
           set +e
-          pnpm --filter @fawtara/web test --reporter=verbose 2>&1 | tee web.log
+          pnpm --filter @faatora/web test --reporter=verbose 2>&1 | tee web.log
           echo "exit=$?" >> "$GITHUB_OUTPUT"
 
       - name: Count tests
@@ -138,7 +141,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            Fawtara PR check results:
+            Faatora PR check results:
 
             - compliance tests: ${{ needs.checks.outputs.compliance_tests }}
             - api tests: ${{ needs.checks.outputs.api_tests }}

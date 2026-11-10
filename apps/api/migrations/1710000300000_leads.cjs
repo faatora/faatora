@@ -18,7 +18,7 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('leads', 'email', { name: 'leads_email_idx' });
   pgm.createIndex('leads', 'created_at', { name: 'leads_created_at_idx' });
-  pgm.sql(`GRANT SELECT, INSERT ON leads TO fawtara_app;`);
+  pgm.sql(`GRANT SELECT, INSERT ON leads TO faatora_app;`);
 };
 exports.down = (pgm) => {
   pgm.dropTable('leads');

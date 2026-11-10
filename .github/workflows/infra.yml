@@ -24,7 +24,7 @@ concurrency:
 env:
   AWS_WORKLOAD_REGION: me-south-1
   AWS_TF_STATE_REGION: us-east-1
-  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/GitHubActionsDeployRole
+  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/fawtara-github-deploy
   TF_STATE_BUCKET: fawtara-tfstate
   TF_LOCK_TABLE: fawtara-tflock
 
@@ -40,10 +40,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -67,6 +67,7 @@ jobs:
         run: |
           terraform plan \
             -var environment=staging \
+            -var aws_region=${{ env.AWS_TF_STATE_REGION }} \
             -var enable_infra=false \
             -out=tfplan
 

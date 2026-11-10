@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { FIRM_CLIENT_ACCESS_LEVELS, FIRM_ENGAGEMENT_TYPES, FIRM_MEMBER_ROLES } from '../../../db/schema/firms';
+import {
+  FIRM_CLIENT_ACCESS_LEVELS,
+  FIRM_ENGAGEMENT_TYPES,
+  FIRM_MEMBER_ROLES,
+} from '../../../db/schema/firms';
 
 /**
  * EP5 Wave 1 -- Zod DTO schemas for the firm-console endpoints. Zod is

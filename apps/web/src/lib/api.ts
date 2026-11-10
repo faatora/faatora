@@ -1,8 +1,8 @@
-// Shared API client for the Fawtara web app.
+// Shared API client for the Faatora web app.
 //
 // Honours two orthogonal context signals:
-//   1. Auth bearer token  — read from localStorage key `fawtara_access_token`.
-//   2. Active firm id     — read from localStorage key `fawtara.activeFirmId`
+//   1. Auth bearer token  — read from localStorage key `faatora_access_token`.
+//   2. Active firm id     — read from localStorage key `faatora.activeFirmId`
 //                            and sent as the `x-firm-id` header on every
 //                            request. Absent for SME users; the header is
 //                            then not emitted at all, preserving the
@@ -14,8 +14,8 @@
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000/api';
 const DEFAULT_TIMEOUT_MS = 10_000;
 
-export const ACTIVE_FIRM_STORAGE_KEY = 'fawtara.activeFirmId';
-export const ACCESS_TOKEN_STORAGE_KEY = 'fawtara_access_token';
+export const ACTIVE_FIRM_STORAGE_KEY = 'faatora.activeFirmId';
+export const ACCESS_TOKEN_STORAGE_KEY = 'faatora_access_token';
 
 export class ApiError extends Error {
   constructor(
