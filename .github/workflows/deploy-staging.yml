@@ -72,6 +72,7 @@ jobs:
       - name: Terraform plan
         run: |
           terraform plan \
+            -lock-timeout=10m \
             -var environment=staging \
             -var aws_region=${{ env.AWS_TF_STATE_REGION }} \
             -var enable_infra=true \
@@ -123,7 +124,7 @@ jobs:
           path: infra
 
       - name: Terraform apply
-        run: terraform apply tfplan.staging
+        run: terraform apply -lock-timeout=10m tfplan.staging
 
   migrate:
     name: Run migrations (staging DB)
