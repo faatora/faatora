@@ -103,3 +103,28 @@ output "ecs_service_name" {
   description = "ECS service name."
   value       = var.enable_infra ? module.compute[0].service_name : null
 }
+
+output "migrate_task_definition_arn" {
+  description = "ARN of the one-off migrate ECS task definition. CI reads this to call `aws ecs run-task`."
+  value       = var.enable_infra ? module.compute[0].migrate_task_definition_arn : null
+}
+
+output "migrate_task_definition_family" {
+  description = "Family name of the migrate task definition."
+  value       = var.enable_infra ? module.compute[0].migrate_task_definition_family : null
+}
+
+output "migrate_log_group_name" {
+  description = "CloudWatch log group that captures migrate-task output."
+  value       = var.enable_infra ? module.compute[0].migrate_log_group_name : null
+}
+
+output "migrate_container_name" {
+  description = "Container name inside the migrate task definition. CI uses it when building the env overrides."
+  value       = var.enable_infra ? module.compute[0].migrate_container_name : null
+}
+
+output "app_security_group_id" {
+  description = "Security group id attached to the app tasks (reused by the one-off migrate task)."
+  value       = var.enable_infra ? module.network[0].app_sg_id : null
+}

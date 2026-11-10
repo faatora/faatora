@@ -74,3 +74,33 @@ variable "log_retention_days" {
   description = "CloudWatch log retention days."
   default     = 30
 }
+
+variable "migrate_task_cpu" {
+  type        = number
+  description = "Fargate CPU units for the one-off migrate task."
+  default     = 256
+}
+
+variable "migrate_task_memory" {
+  type        = number
+  description = "Fargate memory (MiB) for the one-off migrate task."
+  default     = 512
+}
+
+variable "rds_master_user_secret_arn" {
+  type        = string
+  description = "ARN of the RDS master-user secret. The task role is granted secretsmanager:GetSecretValue on this ARN so future revisions of the migrate task can fetch credentials from inside the container. Empty string disables the grant (useful before the DB module has produced the ARN)."
+  default     = ""
+}
+
+variable "ecr_repository_name" {
+  type        = string
+  description = "Name of the ECR repository the deploy-image job pushes to. The migrate task definition references `${account}.dkr.ecr.${region}.amazonaws.com/${name}:staging` so a reused image always matches the tag the deploy pipeline publishes."
+  default     = "faatora-api"
+}
+
+variable "migrate_image_tag" {
+  type        = string
+  description = "Image tag on the ECR repo that the migrate task resolves to at run time. 'staging' is the moving tag the deploy-image job always updates; pin to a sha for repeatable runs."
+  default     = "staging"
+}

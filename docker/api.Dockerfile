@@ -21,5 +21,18 @@ COPY --from=build /app/apps/api/package.json ./
 COPY --from=build /app/packages/compliance/dist ./node_modules/@faatora/compliance/dist
 COPY --from=build /app/packages/compliance/package.json ./node_modules/@faatora/compliance/package.json
 COPY --from=build /app/node_modules ./node_modules
+
+# Migrate-task payload: the migration SQL files and a standalone
+# node-pg-migrate + pg install under /opt/migrate. This image is
+# reused by the "migrate" ECS task definition with a command override,
+# and the self-contained /opt/migrate install sidesteps pnpm's
+# workspace symlink layout so the API's own node_modules stays
+# untouched. The app runtime does not use any of this.
+COPY --from=build /app/apps/api/migrations /app/migrations
+RUN mkdir -p /opt/migrate && cd /opt/migrate && \
+    echo '{"name":"migrate","private":true}' > package.json && \
+    npm install --omit=dev --no-audit --no-fund \
+        node-pg-migrate@7.7.1 pg@8.13.1
+
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

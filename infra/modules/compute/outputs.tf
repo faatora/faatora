@@ -52,3 +52,23 @@ output "log_group_name" {
   description = "CloudWatch log group name."
   value       = aws_cloudwatch_log_group.app.name
 }
+
+output "migrate_task_definition_arn" {
+  description = "ARN of the one-off migrate task definition. Invoked by CI via `aws ecs run-task`."
+  value       = aws_ecs_task_definition.migrate.arn
+}
+
+output "migrate_task_definition_family" {
+  description = "Family name of the migrate task definition (useful when callers want the latest revision rather than a pinned ARN)."
+  value       = aws_ecs_task_definition.migrate.family
+}
+
+output "migrate_log_group_name" {
+  description = "CloudWatch log group that captures migrate-task output."
+  value       = aws_cloudwatch_log_group.migrate.name
+}
+
+output "migrate_container_name" {
+  description = "Container name inside the migrate task definition. CI uses it when passing env overrides to `aws ecs run-task`."
+  value       = var.container_name
+}

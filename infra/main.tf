@@ -69,4 +69,9 @@ module "compute" {
   private_subnet_ids = module.network[0].private_subnet_ids
   alb_sg_id          = module.network[0].alb_sg_id
   app_sg_id          = module.network[0].app_sg_id
+  # The task role gains secretsmanager:GetSecretValue on this ARN so a
+  # future revision of the migrate task can fetch credentials inside
+  # the container. Current CI flow still resolves the URL on the runner
+  # and injects it as a task env override.
+  rds_master_user_secret_arn = module.database[0].master_user_secret_arn
 }
