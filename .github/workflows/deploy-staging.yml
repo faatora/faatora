@@ -187,7 +187,11 @@ jobs:
           DB_PASS=$(echo "$SECRET_JSON" | jq -r .password)
           # URL-encode the password in case it contains special chars
           DB_PASS_ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
-          URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}"
+          # sslmode=require: RDS enforces SSL and pg_hba.conf rejects
+          # unencrypted connections ("no encryption" error otherwise).
+          # require (not verify-full) because we are not shipping the
+          # AWS RDS root CA bundle to the runner for this staging run.
+          URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}?sslmode=require"
           # Mask password in logs
           echo "::add-mask::${DB_PASS}"
           echo "::add-mask::${DB_PASS_ENC}"
