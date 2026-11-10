@@ -268,3 +268,69 @@ jobs:
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_SERVICE" \
             --region "$AWS_TF_STATE_REGION"
+
+  smoke-test:
+    name: Smoke test API over the ALB
+    needs: deploy-image
+    runs-on: ubuntu-latest
+    # Pinned to the same staging environment so the run shows up under the
+    # same deploy timeline in the Actions UI.
+    environment: staging
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
+
+      # ECS service stabilising is not the same thing as the task passing
+      # the ALB target-group health check: the TG probe takes another
+      # 60-90 seconds after the service reports stable. Pulling the ALB
+      # DNS name from AWS (rather than a Terraform output) means this job
+      # does not need the Terraform state to be re-read on every deploy.
+      - name: Resolve ALB DNS name
+        id: alb
+        run: |
+          set -euo pipefail
+          ALB_NAME="faatora-staging-alb"
+          DNS=$(aws elbv2 describe-load-balancers \
+            --names "$ALB_NAME" \
+            --region "$AWS_TF_STATE_REGION" \
+            --query 'LoadBalancers[0].DNSName' \
+            --output text)
+          if [ -z "$DNS" ] || [ "$DNS" = "None" ]; then
+            echo "Could not resolve DNS name for ALB $ALB_NAME" >&2
+            exit 1
+          fi
+          echo "dns=$DNS" >> "$GITHUB_OUTPUT"
+          echo "Resolved ALB DNS: $DNS"
+
+      # The NestJS app sets a global prefix of `api` in main.ts, so the
+      # /health route lives at /api/health. 30 attempts x 10s = up to
+      # 5 minutes, which covers the typical ECS target-group probe window
+      # without being so long that a real outage hides behind the retry.
+      - name: Poll health endpoint
+        env:
+          ALB_DNS: ${{ steps.alb.outputs.dns }}
+        run: |
+          set -u
+          URL="http://${ALB_DNS}/api/health"
+          echo "Polling $URL"
+          ATTEMPTS=30
+          SLEEP=10
+          BODY_FILE="$(mktemp)"
+          for i in $(seq 1 "$ATTEMPTS"); do
+            CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+              --max-time 10 \
+              --connect-timeout 5 \
+              "$URL" || echo "000")
+            if [ "$CODE" -ge 200 ] && [ "$CODE" -lt 300 ]; then
+              echo "Attempt $i: HTTP $CODE OK"
+              cat "$BODY_FILE"
+              exit 0
+            fi
+            echo "Attempt $i/$ATTEMPTS: HTTP $CODE (retrying in ${SLEEP}s)"
+            sleep "$SLEEP"
+          done
+          echo "Smoke test failed after $ATTEMPTS attempts. Last response body:" >&2
+          cat "$BODY_FILE" >&2 || true
+          exit 1
