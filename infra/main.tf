@@ -37,8 +37,8 @@ module "database" {
   source = "./modules/database"
   count  = var.enable_infra ? 1 : 0
 
-  project        = var.project
-  environment    = var.environment
+  project     = var.project
+  environment = var.environment
   # STAGING-ONLY HACK: RDS in public subnets with publicly_accessible=true
   # so GitHub Actions CI can run migrations directly. Before production,
   # revert to private_subnet_ids + publicly_accessible=false and run
