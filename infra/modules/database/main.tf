@@ -53,7 +53,7 @@ resource "aws_db_instance" "this" {
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [var.db_sg_id]
   parameter_group_name   = aws_db_parameter_group.this.name
-  publicly_accessible    = false
+  publicly_accessible    = var.publicly_accessible
   port                   = 5432
 
   backup_retention_period = var.backup_retention_period

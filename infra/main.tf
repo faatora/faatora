@@ -39,9 +39,14 @@ module "database" {
 
   project        = var.project
   environment    = var.environment
-  vpc_subnet_ids = module.network[0].private_subnet_ids
-  db_sg_id       = module.network[0].db_sg_id
-  multi_az       = var.db_multi_az
+  # STAGING-ONLY HACK: RDS in public subnets with publicly_accessible=true
+  # so GitHub Actions CI can run migrations directly. Before production,
+  # revert to private_subnet_ids + publicly_accessible=false and run
+  # migrations from an in-VPC ECS task. Tracked as Wave 3 cleanup.
+  vpc_subnet_ids      = module.network[0].public_subnet_ids
+  db_sg_id            = module.network[0].db_sg_id
+  publicly_accessible = true
+  multi_az            = var.db_multi_az
 }
 
 module "archive" {

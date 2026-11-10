@@ -71,3 +71,9 @@ variable "deletion_protection" {
   description = "Enable deletion protection."
   default     = true
 }
+
+variable "publicly_accessible" {
+  type        = bool
+  description = "Whether the RDS instance is publicly accessible. STAGING ONLY — must be false for production. Combine with an SG that restricts source IPs."
+  default     = false
+}
