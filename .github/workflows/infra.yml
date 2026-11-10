@@ -67,6 +67,7 @@ jobs:
         run: |
           terraform plan \
             -var environment=staging \
+            -var aws_region=${{ env.AWS_TF_STATE_REGION }} \
             -var enable_infra=false \
             -out=tfplan
 
