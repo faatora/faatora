@@ -187,11 +187,15 @@ jobs:
           DB_PASS=$(echo "$SECRET_JSON" | jq -r .password)
           # URL-encode the password in case it contains special chars
           DB_PASS_ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
-          # sslmode=require: RDS enforces SSL and pg_hba.conf rejects
-          # unencrypted connections ("no encryption" error otherwise).
-          # require (not verify-full) because we are not shipping the
-          # AWS RDS root CA bundle to the runner for this staging run.
-          URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}?sslmode=require"
+          # Encrypted connection, no CA verification:
+          # - RDS enforces SSL via pg_hba.conf ("no encryption" error otherwise)
+          # - node-postgres aliases sslmode=require to verify-full by default,
+          #   which rejects the AWS RDS CA since it is not in Node's trust
+          #   store. The library tells us to use uselibpqcompat=true to opt
+          #   into standard libpq semantics (require = encrypt, no verify).
+          # - verify-full remains the right target before production and
+          #   requires shipping the RDS global bundle to the runner.
+          URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}?uselibpqcompat=true&sslmode=require"
           # Mask password in logs
           echo "::add-mask::${DB_PASS}"
           echo "::add-mask::${DB_PASS_ENC}"
