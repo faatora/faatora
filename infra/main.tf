@@ -7,6 +7,7 @@ module "network" {
   project     = var.project
   environment = var.environment
   vpc_cidr    = var.vpc_cidr
+  az_count    = var.az_count
 }
 
 module "kms" {

@@ -10,20 +10,19 @@ variable "environment" {
 
 variable "vpc_cidr" {
   type        = string
-  description = "CIDR block for the VPC."
+  description = "CIDR block for the VPC. Must be a /16; subnet CIDRs are carved as /20 slices with cidrsubnet()."
   default     = "10.20.0.0/16"
 }
 
-variable "public_subnet_cidrs" {
-  type        = list(string)
-  description = "CIDR blocks for the public subnets (one per AZ)."
-  default     = ["10.20.0.0/20", "10.20.16.0/20"]
-}
+variable "az_count" {
+  type        = number
+  description = "Number of AZs (and matching pairs of public/private subnets) to provision. Subnet CIDRs are derived with cidrsubnet(var.vpc_cidr, 4, i) for public[0..n) and cidrsubnet(var.vpc_cidr, 4, n+i) for private[0..n). With az_count=2 under 10.20.0.0/16 this reproduces the subnets Terraform state holds for staging today, so a plan is a no-op there."
+  default     = 2
 
-variable "private_subnet_cidrs" {
-  type        = list(string)
-  description = "CIDR blocks for the private subnets (one per AZ)."
-  default     = ["10.20.32.0/20", "10.20.48.0/20"]
+  validation {
+    condition     = var.az_count >= 2 && var.az_count <= 4
+    error_message = "az_count must be between 2 and 4."
+  }
 }
 
 variable "app_port" {
