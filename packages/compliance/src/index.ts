@@ -25,4 +25,5 @@ export type { ValidationIssue, ValidationReport } from './validate/types.js';
 export * from './validate/vat-math.js';
 export * from './validate/xsd-lite.js';
 export * from './validate/schematron-lite.js';
+export * from './validate/om-rules.js';
 export * from './validate/pipeline.js';
