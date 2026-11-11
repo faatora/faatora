@@ -1,0 +1,77 @@
+{
+  "locales": [
+    "en",
+    "ar"
+  ],
+  "totalEnKeys": 331,
+  "totalArKeys": 331,
+  "missingInAr": [],
+  "emptyInAr": [],
+  "staleInAr": [],
+  "identicalValues": [],
+  "hardcodedStrings": [
+    {
+      "file": "src/features/firms/dashboard/pages/DashboardPage.tsx",
+      "line": 391,
+      "kind": "jsx-text",
+      "text": "to",
+      "context": "{v.periodStart} to {v.periodEnd}"
+    },
+    {
+      "file": "src/features/firms/clients/components/csvParser.ts",
+      "line": 125,
+      "kind": "string-literal",
+      "text": "tenantName is required",
+      "context": "if (!tenantName) errors.push('tenantName is required');"
+    },
+    {
+      "file": "src/features/firms/clients/components/csvParser.ts",
+      "line": 126,
+      "kind": "string-literal",
+      "text": "crNumber is required",
+      "context": "if (!crNumber) errors.push('crNumber is required');"
+    },
+    {
+      "file": "src/features/firms/clients/components/csvParser.ts",
+      "line": 127,
+      "kind": "string-literal",
+      "text": "vatin is required",
+      "context": "if (!vatin) errors.push('vatin is required');"
+    },
+    {
+      "file": "src/features/firms/clients/components/csvParser.ts",
+      "line": 128,
+      "kind": "string-literal",
+      "text": "country must be a 2-letter code",
+      "context": "if (country.length !== 2) errors.push('country must be a 2-letter code');"
+    },
+    {
+      "file": "src/features/firms/clients/components/csvParser.ts",
+      "line": 130,
+      "kind": "string-literal",
+      "text": "accessLevel must be full or read_only",
+      "context": "errors.push('accessLevel must be full or read_only');"
+    },
+    {
+      "file": "src/features/firms/clients/components/csvParser.ts",
+      "line": 133,
+      "kind": "string-literal",
+      "text": "engagementType must be ongoing or periodic",
+      "context": "errors.push('engagementType must be ongoing or periodic');"
+    },
+    {
+      "file": "src/features/firms/clients/components/csvParser.ts",
+      "line": 136,
+      "kind": "string-literal",
+      "text": "shopOwnerEmail is not a valid email",
+      "context": "errors.push('shopOwnerEmail is not a valid email');"
+    },
+    {
+      "file": "src/components/LanguageToggle.tsx",
+      "line": 17,
+      "kind": "attribute",
+      "text": "Language",
+      "context": "<div className=\"inline-flex items-center gap-2\" role=\"group\" aria-label=\"Language\">"
+    }
+  ]
+}

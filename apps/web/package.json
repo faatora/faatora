@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "i18n:audit": "node --experimental-strip-types scripts/i18n-audit.ts"
   },
   "dependencies": {
     "i18next": "^23.16.8",
