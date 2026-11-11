@@ -20,3 +20,6 @@ tfplan
 .vite/
 .cache/
 crash.log
+
+# Claude Code local config (per-developer, not shared)
+.claude/
