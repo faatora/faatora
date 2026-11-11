@@ -6,7 +6,8 @@
   },
   "nav": {
     "en": "English",
-    "ar": "Arabic"
+    "ar": "Arabic",
+    "languageAriaLabel": "Language"
   },
   "landing": {
     "title": "Oman e-invoicing readiness check",
@@ -145,6 +146,11 @@
       "name": "Client",
       "status": "Status"
     },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "unknown": "Unknown"
+    },
     "loading": "Loading…",
     "loadError": "Could not load your firm data.",
     "pleaseLogIn": "Please log in to continue."
@@ -265,6 +271,7 @@
         "title": "Upcoming VAT returns",
         "empty": "No upcoming VAT returns.",
         "due": "Due {{date}}",
+        "period_range": "{{start}} to {{end}}",
         "status": {
           "draft": "Draft",
           "submitted": "Submitted",
@@ -385,7 +392,14 @@
       "batch.submit": "Onboard {{count}} client(s)",
       "batch.submitting": "Onboarding…",
       "batch.resultsHeader": "{{created}} onboarded · {{failed}} failed",
-      "batch.startOver": "Upload another batch"
+      "batch.startOver": "Upload another batch",
+      "batch.errors.tenantName_required": "Client business name is required",
+      "batch.errors.crNumber_required": "CR number is required",
+      "batch.errors.vatin_required": "VATIN is required",
+      "batch.errors.country_length": "Country must be a 2-letter ISO code",
+      "batch.errors.accessLevel_invalid": "Access level must be \"full\" or \"read_only\"",
+      "batch.errors.engagementType_invalid": "Engagement type must be \"ongoing\" or \"periodic\"",
+      "batch.errors.shopOwnerEmail_invalid": "Shop owner email is not a valid email address"
     },
     "list": {
       "title": "Clients",
