@@ -549,11 +549,7 @@ export function main(options: MainOptions = {}): AuditResult {
   writeFileSync(jsonPath, renderJsonReport(result), 'utf8');
   if (!options.jsonOnly) {
     writeFileSync(join(outDir, 'i18n-audit-report.md'), renderMarkdownReport(result), 'utf8');
-    writeFileSync(
-      join(outDir, 'UNTRANSLATED-STRINGS.md'),
-      renderHardcodedMarkdown(result),
-      'utf8',
-    );
+    writeFileSync(join(outDir, 'UNTRANSLATED-STRINGS.md'), renderHardcodedMarkdown(result), 'utf8');
   }
   // Mirror the one-paragraph summary to stdout for a human reading the
   // command output in CI.
