@@ -402,7 +402,7 @@ function BatchOnboardForm({
                     <Td>{r.crNumber || '--'}</Td>
                     <Td>{r.vatin || '--'}</Td>
                     <Td className="text-rose-800">
-                      {r._errors.length > 0 ? r._errors.join('; ') : ''}
+                      {r._errors.length > 0 ? r._errors.map((e) => t(e.code)).join('; ') : ''}
                     </Td>
                   </tr>
                 ))}

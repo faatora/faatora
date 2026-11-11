@@ -142,8 +142,12 @@ export function ClientListPage(props: ClientListPageProps) {
                     <Td>
                       <span className="font-medium text-slate-900">{r.tenantName}</span>
                     </Td>
-                    <Td className="text-slate-700">{r.engagementType}</Td>
-                    <Td className="text-slate-700">{r.accessLevel}</Td>
+                    <Td className="text-slate-700">{t(`clients.list.filter.${r.engagementType}`)}</Td>
+                    <Td className="text-slate-700">
+                      {r.accessLevel === 'read_only'
+                        ? t('clients.wizard.single.accessLevel.readOnly')
+                        : t('clients.wizard.single.accessLevel.full')}
+                    </Td>
                     <Td className="text-end">
                       <div className="inline-flex items-center gap-2">
                         <button
