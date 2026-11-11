@@ -26,3 +26,6 @@ export * from './validate/vat-math.js';
 export * from './validate/xsd-lite.js';
 export * from './validate/schematron-lite.js';
 export * from './validate/pipeline.js';
+
+// PDF/A-3 renderer (A14).
+export * from './pdf/index.js';
