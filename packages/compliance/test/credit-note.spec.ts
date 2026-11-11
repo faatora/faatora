@@ -90,9 +90,7 @@ describe('serializeCreditNote — document shape', () => {
     expect(xml).toContain(
       'xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"',
     );
-    expect(xml).not.toContain(
-      'xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"',
-    );
+    expect(xml).not.toContain('xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"');
   });
 
   it('emits CreditNoteTypeCode 381, not InvoiceTypeCode', () => {

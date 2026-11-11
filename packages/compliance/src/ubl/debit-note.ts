@@ -138,8 +138,5 @@ export function serializeDebitNote(input: DebitNoteInput): string {
  * exotic character cannot break the output.
  */
 function escapeXmlText(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

@@ -15,8 +15,7 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 
 export type ParseCreditNoteResult =
-  | { ok: true; data: Record<string, unknown> }
-  | { ok: false; errors: string[] };
+  { ok: true; data: Record<string, unknown> } | { ok: false; errors: string[] };
 
 const MANDATORY_PATHS: Array<[string, (cn: Record<string, unknown>) => boolean]> = [
   ['CreditNote/cbc:CustomizationID', (cn) => hasText(cn['cbc:CustomizationID'])],
@@ -57,8 +56,7 @@ function isNonEmptyObject(v: unknown): v is Record<string, unknown> {
 export function parseCreditNote(xml: string): ParseCreditNoteResult {
   const valid = XMLValidator.validate(xml, { allowBooleanAttributes: false });
   if (valid !== true) {
-    const msg =
-      (valid as { err?: { msg?: string } })?.err?.msg ?? 'invalid XML';
+    const msg = (valid as { err?: { msg?: string } })?.err?.msg ?? 'invalid XML';
     return { ok: false, errors: [`xml_wellformedness: ${msg}`] };
   }
 

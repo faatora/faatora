@@ -315,24 +315,15 @@ export class TaxDocumentsService {
    */
   async list(firmId: string, tenantId: string, kind?: TaxDocumentKind) {
     return withFirmTenant(this.db, firmId, tenantId, async (tx) => {
-      const base = tx
-        .select()
-        .from(taxDocuments)
-        .orderBy(desc(taxDocuments.createdAt));
-      const rows = kind
-        ? await base.where(eq(taxDocuments.kind, kind))
-        : await base;
+      const base = tx.select().from(taxDocuments).orderBy(desc(taxDocuments.createdAt));
+      const rows = kind ? await base.where(eq(taxDocuments.kind, kind)) : await base;
       return rows;
     });
   }
 
   async get(firmId: string, tenantId: string, id: string) {
     return withFirmTenant(this.db, firmId, tenantId, async (tx) => {
-      const [row] = await tx
-        .select()
-        .from(taxDocuments)
-        .where(eq(taxDocuments.id, id))
-        .limit(1);
+      const [row] = await tx.select().from(taxDocuments).where(eq(taxDocuments.id, id)).limit(1);
       if (!row) throw new NotFoundException('Tax document not found');
       const lines = await tx
         .select()
