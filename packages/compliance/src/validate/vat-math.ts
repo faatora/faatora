@@ -38,11 +38,7 @@
  *   OM-VAT-010 — unknown VAT category code
  */
 
-import {
-  getVatCategory,
-  isReverseCharge,
-  isValidVatCategory,
-} from '../codelists/vat-category.js';
+import { getVatCategory, isReverseCharge, isValidVatCategory } from '../codelists/vat-category.js';
 import { CURRENCY_SCALE, isValidCurrency } from '../codelists/currency.js';
 import type { SemanticInvoice, SemanticVatBreakdownRow } from '../semantic/en16931.js';
 import type { ValidationIssue } from './types.js';

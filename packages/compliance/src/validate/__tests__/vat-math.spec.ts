@@ -19,11 +19,7 @@ import type { CanonicalInvoice, VatCategory } from '../../canonical/types.js';
 import { canonicalToSemantic } from '../../semantic/map.js';
 import type { SemanticInvoice, SemanticLine } from '../../semantic/en16931.js';
 import { validateInvoice } from '../pipeline.js';
-import {
-  REVERSE_CHARGE_NOTE_AR,
-  REVERSE_CHARGE_NOTE_EN,
-  runOmRules,
-} from '../om-rules.js';
+import { REVERSE_CHARGE_NOTE_AR, REVERSE_CHARGE_NOTE_EN, runOmRules } from '../om-rules.js';
 import {
   computeVatMathSummary,
   deriveBreakdownRow,
@@ -89,8 +85,7 @@ function semanticWithCategory(
   const semantic = canonicalToSemantic(invoice());
   const scale = 3;
   const taxableInt = toScaledInt(semantic.bg25_lines[0].bt131_lineNetAmount, scale);
-  const taxInt =
-    code === 'S' ? Math.round((taxableInt * rate) / 100) : 0;
+  const taxInt = code === 'S' ? Math.round((taxableInt * rate) / 100) : 0;
   const taxable = fromScaledInt(taxableInt, scale);
   const tax = fromScaledInt(taxInt, scale);
   const totalWithVat = fromScaledInt(taxableInt + taxInt, scale);

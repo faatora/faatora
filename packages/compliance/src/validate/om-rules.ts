@@ -178,10 +178,7 @@ export function runOmRules(semantic: SemanticInvoice): ValidationIssue[] {
   // (zero-tolerance) version in the arithmetic stage; OM-R-05 is the
   // business-rule form that accepts off-by-one baisa drift which can
   // arise when ERPs round line nets independently of the sum.
-  const bt109Int = toScaledInt(
-    semantic.bg22_documentTotals.bt109_totalAmountWithoutVat,
-    scale,
-  );
+  const bt109Int = toScaledInt(semantic.bg22_documentTotals.bt109_totalAmountWithoutVat, scale);
   const bt109Diff = Math.abs(bt109Int - summary.expectedTaxExclusiveInt);
   if (bt109Diff > RECON_TOLERANCE_INT) {
     issues.push(
