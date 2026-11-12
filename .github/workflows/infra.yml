@@ -50,7 +50,10 @@ jobs:
           terraform_version: 1.9.8
 
       - name: Terraform fmt
-        run: terraform fmt -check -recursive
+        # -diff so a drift surfaces the actual diff in the log, not just
+        # the filename; previously a bare "modules/network/main.tf"
+        # printout gave no indication of what to change.
+        run: terraform fmt -check -recursive -diff
 
       - name: Terraform init
         run: |
