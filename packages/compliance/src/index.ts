@@ -30,3 +30,9 @@ export * from './validate/xsd-lite.js';
 export * from './validate/schematron-lite.js';
 export * from './validate/om-rules.js';
 export * from './validate/pipeline.js';
+
+// Peppol AS4 transport adapter scaffold (see transport/as4/README.md).
+// Signing + wire transmission happen at the partner ASP boundary under
+// the OTA SP §5.7 subcontractor model; this module only produces the
+// typed envelope + port and ships a mock + skeleton HTTP client.
+export * from './transport/as4/index.js';
