@@ -38,8 +38,6 @@ import { SentryRequestContextMiddleware } from './sentry-request-context.middlew
 })
 export class ObservabilityModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer
-      .apply(HttpMetricsMiddleware, SentryRequestContextMiddleware)
-      .forRoutes('*');
+    consumer.apply(HttpMetricsMiddleware, SentryRequestContextMiddleware).forRoutes('*');
   }
 }

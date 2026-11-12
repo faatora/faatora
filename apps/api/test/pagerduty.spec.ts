@@ -46,9 +46,7 @@ describe('verifyPagerDutySignature', () => {
   });
 
   it('shrugs off malformed entries without throwing', () => {
-    expect(() =>
-      verifyPagerDutySignature(body, 'garbage,v1=,v1=notHex', secret),
-    ).not.toThrow();
+    expect(() => verifyPagerDutySignature(body, 'garbage,v1=,v1=notHex', secret)).not.toThrow();
     expect(verifyPagerDutySignature(body, 'garbage', secret)).toBe(false);
   });
 
@@ -168,9 +166,7 @@ describe('PagerDutyService — trigger/acknowledge/resolve HTTP wiring', () => {
     expect(call[0]).toBe('https://events.pagerduty.com/v2/enqueue');
     const init = call[1] as RequestInit;
     expect(init.method).toBe('POST');
-    expect((init.headers as Record<string, string>)['content-type']).toBe(
-      'application/json',
-    );
+    expect((init.headers as Record<string, string>)['content-type']).toBe('application/json');
     const body = JSON.parse(String(init.body));
     expect(body.routing_key).toBe('ROUTE_KEY_XYZ');
     expect(body.event_action).toBe('trigger');
@@ -223,9 +219,9 @@ describe('PagerDutyService — trigger/acknowledge/resolve HTTP wiring', () => {
 
   it('returns null and does NOT throw on a network error', async () => {
     process.env.PAGERDUTY_ROUTING_KEY = 'ROUTE_KEY_XYZ';
-    globalThis.fetch = jest.fn().mockRejectedValue(
-      new Error('ENETUNREACH'),
-    ) as unknown as typeof globalThis.fetch;
+    globalThis.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error('ENETUNREACH')) as unknown as typeof globalThis.fetch;
 
     const svc = new PagerDutyService();
     await expect(

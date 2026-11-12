@@ -11,18 +11,12 @@ import type { FallbackRender } from '@sentry/react';
  */
 export const ErrorFallback: FallbackRender = ({ error, eventId, resetError }) => {
   const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : 'Unknown error';
+    error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
   return (
     <main className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <div className="mx-auto max-w-xl px-6 py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-start text-xl font-semibold text-slate-900">
-            Something went wrong
-          </h1>
+          <h1 className="text-start text-xl font-semibold text-slate-900">Something went wrong</h1>
           <p className="mt-2 text-start text-sm text-slate-700">
             Faatora hit an unexpected error. The team has been notified.
           </p>

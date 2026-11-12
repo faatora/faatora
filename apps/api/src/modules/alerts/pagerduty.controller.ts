@@ -71,9 +71,7 @@ export class PagerDutyController {
       // 503 rather than 200: a deploy that forgets to inject the
       // secret should be loud. PagerDuty will retry with backoff and
       // ops will see the misconfiguration.
-      this.log.error(
-        'PAGERDUTY_WEBHOOK_SECRET unset; refusing to accept unverified webhook',
-      );
+      this.log.error('PAGERDUTY_WEBHOOK_SECRET unset; refusing to accept unverified webhook');
       throw new ServiceUnavailableException('pagerduty webhook not configured');
     }
 

@@ -105,10 +105,7 @@ export class PagerDutyService {
    * Exposed so the unit test can assert the shape without going
    * through the real HTTP path.
    */
-  buildTriggerPayload(
-    routingKey: string,
-    input: PagerDutyTriggerInput,
-  ): Record<string, unknown> {
+  buildTriggerPayload(routingKey: string, input: PagerDutyTriggerInput): Record<string, unknown> {
     return {
       routing_key: routingKey,
       event_action: 'trigger',
@@ -129,9 +126,7 @@ export class PagerDutyService {
     const key = process.env.PAGERDUTY_ROUTING_KEY;
     if (!key) {
       if (!this.warnedUnconfigured) {
-        this.log.warn(
-          'PAGERDUTY_ROUTING_KEY unset — trigger/acknowledge/resolve are no-ops',
-        );
+        this.log.warn('PAGERDUTY_ROUTING_KEY unset — trigger/acknowledge/resolve are no-ops');
         this.warnedUnconfigured = true;
       }
       return null;

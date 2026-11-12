@@ -79,7 +79,8 @@ function hostWithRequest(req: Record<string, unknown>): ArgumentsHost {
     getArgs: () => [],
     getArgByIndex: () => undefined,
     switchToRpc: () => ({ getContext: () => ({}), getData: () => ({}) }) as never,
-    switchToWs: () => ({ getClient: () => ({}), getData: () => ({}), getPattern: () => '' }) as never,
+    switchToWs: () =>
+      ({ getClient: () => ({}), getData: () => ({}), getPattern: () => '' }) as never,
   } as unknown as ArgumentsHost;
 }
 
@@ -109,18 +110,14 @@ describe('SentryExceptionFilter', () => {
 
     expect(captured).toHaveLength(1);
     expect(captured[0]!.exception).toBe(err);
-    const tagMap = Object.fromEntries(
-      captured[0]!.tags.map((t) => [t.key, t.value]),
-    );
+    const tagMap = Object.fromEntries(captured[0]!.tags.map((t) => [t.key, t.value]));
     expect(tagMap).toMatchObject({
       tenant_id: 'tnt_123',
       user_id: 'usr_456',
       correlation_id: 'corr-abc',
       route: '/invoices',
     });
-    const extraMap = Object.fromEntries(
-      captured[0]!.extras.map((e) => [e.key, e.value]),
-    );
+    const extraMap = Object.fromEntries(captured[0]!.extras.map((e) => [e.key, e.value]));
     expect(extraMap).toMatchObject({ method: 'POST', url: '/api/invoices' });
   });
 
@@ -160,9 +157,7 @@ describe('SentryExceptionFilter', () => {
       // The important assertion is that filter.catch itself does not
       // propagate the Sentry failure — the client still gets a
       // response from the fallback.
-      expect(() =>
-        filter.catch(new Error('boom'), hostWithRequest({ headers: {} })),
-      ).not.toThrow();
+      expect(() => filter.catch(new Error('boom'), hostWithRequest({ headers: {} }))).not.toThrow();
     } finally {
       sentry.captureException = original;
     }
