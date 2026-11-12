@@ -12,6 +12,7 @@
     "i18n:audit": "node --experimental-strip-types scripts/i18n-audit.ts"
   },
   "dependencies": {
+    "@sentry/react": "^8.47.0",
     "i18next": "^23.16.8",
     "i18next-browser-languagedetector": "^8.0.2",
     "react": "^18.3.1",
@@ -20,6 +21,7 @@
     "react-router-dom": "^7.18.5"
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^2.22.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",

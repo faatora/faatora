@@ -61,6 +61,22 @@ const envSchema = z.object({
   // is REQUIRED for the sign-in-prod path to boot. The signing module binds
   // KmsSigner on production and KmsSigner currently throws on every sign —
   // operators must wire the KMS KeyId before go-live.
+
+  // Sentry error tracking. Leave unset in local dev; the SDK boot is
+  // feature-flagged on DSN presence (apps/api/src/common/observability/
+  // sentry.ts) so nothing ships when it is blank. Sample rates default
+  // to 10% in staging/prod via the parseFloat fallbacks in the init.
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.string().optional(),
+  SENTRY_PROFILES_SAMPLE_RATE: z.string().optional(),
+
+  // PagerDuty — incoming webhooks and outgoing Events API v2. Both are
+  // optional at the config level; the controller 503s when it receives
+  // an inbound hit without PAGERDUTY_WEBHOOK_SECRET set, and the client
+  // throws on trigger/ack/resolve when PAGERDUTY_ROUTING_KEY is unset.
+  // Both allow boot without values so unrelated test suites keep working.
+  PAGERDUTY_WEBHOOK_SECRET: z.string().optional(),
+  PAGERDUTY_ROUTING_KEY: z.string().optional(),
 });
 export type Env = z.infer<typeof envSchema>;
 let cached: Env | null = null;
