@@ -1,6 +1,6 @@
 locals {
-  name_prefix          = "${var.project}-${var.environment}"
-  az_count             = var.az_count
+  name_prefix = "${var.project}-${var.environment}"
+  az_count    = var.az_count
   # Public subnets fill the first az_count /20 slices of the VPC CIDR;
   # private subnets fill the next az_count. Computing these from the
   # VPC CIDR (rather than hardcoded 10.20.x values) lets production run
