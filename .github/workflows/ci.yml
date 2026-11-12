@@ -86,6 +86,17 @@ jobs:
       - name: Run migrations against ephemeral postgres
         run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
 
+      # The compliance PDF renderer tests drive headless Chromium
+      # through Playwright. The default GitHub-hosted runner image
+      # bundles Playwright node_modules via pnpm install, but not the
+      # browser binaries, so chromium.launch() fails with:
+      #   browserType.launch: Executable doesn't exist at
+      #   /home/runner/.cache/ms-playwright/chromium_headless_shell-*
+      # --with-deps also installs the OS-level libs (libnss3, libatk,
+      # etc.) that Chromium needs to boot on a stock ubuntu-latest.
+      - name: Install Playwright Chromium
+        run: pnpm --filter @faatora/compliance exec playwright install chromium --with-deps
+
       - name: Compliance tests
         run: pnpm --filter @faatora/compliance test
 
