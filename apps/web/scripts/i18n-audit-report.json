@@ -1,0 +1,13 @@
+{
+  "locales": [
+    "en",
+    "ar"
+  ],
+  "totalEnKeys": 343,
+  "totalArKeys": 343,
+  "missingInAr": [],
+  "emptyInAr": [],
+  "staleInAr": [],
+  "identicalValues": [],
+  "hardcodedStrings": []
+}

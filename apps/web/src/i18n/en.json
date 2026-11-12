@@ -6,7 +6,8 @@
   },
   "nav": {
     "en": "English",
-    "ar": "Arabic"
+    "ar": "Arabic",
+    "languageAriaLabel": "Language"
   },
   "landing": {
     "title": "Oman e-invoicing readiness check",
@@ -145,6 +146,11 @@
       "name": "Client",
       "status": "Status"
     },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "unknown": "Unknown"
+    },
     "loading": "Loading…",
     "loadError": "Could not load your firm data.",
     "pleaseLogIn": "Please log in to continue."
@@ -265,6 +271,7 @@
         "title": "Upcoming VAT returns",
         "empty": "No upcoming VAT returns.",
         "due": "Due {{date}}",
+        "period_range": "{{start}} to {{end}}",
         "status": {
           "draft": "Draft",
           "submitted": "Submitted",
@@ -385,7 +392,14 @@
       "batch.submit": "Onboard {{count}} client(s)",
       "batch.submitting": "Onboarding…",
       "batch.resultsHeader": "{{created}} onboarded · {{failed}} failed",
-      "batch.startOver": "Upload another batch"
+      "batch.startOver": "Upload another batch",
+      "batch.errors.tenantName_required": "Client business name is required",
+      "batch.errors.crNumber_required": "CR number is required",
+      "batch.errors.vatin_required": "VATIN is required",
+      "batch.errors.country_length": "Country must be a 2-letter ISO code",
+      "batch.errors.accessLevel_invalid": "Access level must be \"full\" or \"read_only\"",
+      "batch.errors.engagementType_invalid": "Engagement type must be \"ongoing\" or \"periodic\"",
+      "batch.errors.shopOwnerEmail_invalid": "Shop owner email is not a valid email address"
     },
     "list": {
       "title": "Clients",
@@ -409,6 +423,49 @@
       "action.viewInvoices": "View invoices",
       "action.revoke": "Revoke",
       "action.revoking": "Revoking…"
+    }
+  },
+  "taxDocuments": {
+    "credit": {
+      "title": "Create credit note",
+      "cta": "Create credit note",
+      "submit": "Issue credit note"
+    },
+    "debit": {
+      "title": "Create debit note",
+      "cta": "Create debit note",
+      "submit": "Issue debit note"
+    },
+    "form": {
+      "againstInvoice": "Against invoice {{number}}",
+      "number": "Document number",
+      "issueDate": "Issue date",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. Returned goods, pricing correction",
+      "linesSection": "Lines to credit or debit",
+      "linesTitle": "Lines to include",
+      "lineAria": "Include line: {{description}}",
+      "totalsAria": "Document totals",
+      "col": {
+        "pick": "Pick",
+        "description": "Description",
+        "qty": "Qty",
+        "unitPrice": "Unit price",
+        "lineNet": "Line net"
+      },
+      "subtotal": "Subtotal",
+      "vat": "VAT",
+      "grandTotal": "Total",
+      "cancel": "Cancel",
+      "submitting": "Submitting…",
+      "errors": {
+        "noLines": "Pick at least one line with a positive quantity."
+      },
+      "notCleared": {
+        "title": "This invoice cannot be adjusted yet",
+        "body": "Only cleared invoices can be credited or debited (current status: {{status}}).",
+        "hint": "Available once the invoice is cleared"
+      }
     }
   },
   "ops": {

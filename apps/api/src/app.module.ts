@@ -21,6 +21,7 @@ import { FirmsModule } from './modules/firms/firms.module';
 import { ArchiveModule } from './modules/archive/archive.module';
 import { ClearanceModule } from './modules/clearance/clearance.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { TaxDocumentsModule } from './modules/tax-documents/tax-documents.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 @Module({
@@ -70,7 +71,7 @@ import { AlertsModule } from './modules/alerts/alerts.module';
     ArchiveModule,
     ClearanceModule,
     AuditModule,
-    AlertsModule,
+    TaxDocumentsModule,
   ],
 })
 export class AppModule {}

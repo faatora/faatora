@@ -1,0 +1,156 @@
+{
+  "$schema": "./_review-needed.schema.json",
+  "$comment": "Native-speaker review backlog for Arabic translations. Reviewer workflow lives in apps/web/src/locales/README.md. Confidence tags: high = common UI word, safe to ship. medium = domain-specific (finance / OTA terminology), native eyes requested. low = long sentence, legal or compliance nuance, or a term with real ambiguity — MUST be reviewed before the next release.",
+  "entries": {
+    "brand": {
+      "en": "Faatora",
+      "ar": "فاتورة",
+      "confidence": "low",
+      "reason": "The Arabic value is also the ordinary word for \"invoice\" (fātūra). May be intentional branding; equally may confuse a user who sees the chrome word 'invoice' as the app name. Needs a product decision — keep فاتورة, keep the Latin brand Faatora, or coin a transliteration like فاتورا."
+    },
+    "nav.languageAriaLabel": {
+      "en": "Language",
+      "ar": "اللغة",
+      "confidence": "high",
+      "reason": "Standard screen-reader label; verified against common Arabic UI practice."
+    },
+    "accountant.status.active": {
+      "en": "Active",
+      "ar": "نشط",
+      "confidence": "high",
+      "reason": "Common UI state label."
+    },
+    "accountant.status.suspended": {
+      "en": "Suspended",
+      "ar": "موقوف",
+      "confidence": "medium",
+      "reason": "\"موقوف\" (stopped/frozen) is correct but a reviewer may prefer \"مُعلّق\" (hung/paused) depending on whether the state is punitive or temporary."
+    },
+    "accountant.status.unknown": {
+      "en": "Unknown",
+      "ar": "غير معروف",
+      "confidence": "high",
+      "reason": "Standard phrasing."
+    },
+    "accountant.referred_badge": {
+      "en": "Referred",
+      "ar": "محال",
+      "confidence": "medium",
+      "reason": "Unvocalized \"محال\" is ambiguous — reads as \"referred\" or \"impossible\". Reviewer should decide: vocalize as \"مُحال\" or switch to an unambiguous form like \"تمت إحالته\" or \"إحالة\" (as a label)."
+    },
+    "accountant.mark_referred": {
+      "en": "I referred this client (eligible for revenue share)",
+      "ar": "أنا مَن أحال هذا العميل (مؤهّل لحصة الإيرادات)",
+      "confidence": "low",
+      "reason": "Has revenue-share legal implications; must match whatever wording appears in the partner agreement. Reviewer to align with the firm's partner agreement in Arabic."
+    },
+    "clients.list.revokeConfirm": {
+      "en": "Revoke this client engagement? Historical data remains, but you will lose cross-tenant access.",
+      "ar": "هل تريد إنهاء ارتباط هذا العميل؟ ستبقى بيانات تاريخية، لكن ستفقد الوصول عبر المنشأة.",
+      "confidence": "low",
+      "reason": "Long destructive-action confirmation. Phrase \"الوصول عبر المنشأة\" is a direct calque; a native reviewer may rephrase as \"الوصول إلى بيانات هذه المنشأة\"."
+    },
+    "clients.wizard.batch.errors.tenantName_required": {
+      "en": "Client business name is required",
+      "ar": "اسم منشأة العميل مطلوب",
+      "confidence": "medium",
+      "reason": "Short domain phrase; reviewer to confirm \"منشأة العميل\" vs the shorter \"اسم المنشأة\"."
+    },
+    "clients.wizard.batch.errors.crNumber_required": {
+      "en": "CR number is required",
+      "ar": "رقم السجل التجاري مطلوب",
+      "confidence": "high",
+      "reason": "OTA-standard phrasing."
+    },
+    "clients.wizard.batch.errors.vatin_required": {
+      "en": "VATIN is required",
+      "ar": "الرقم الضريبي مطلوب",
+      "confidence": "high",
+      "reason": "OTA-standard phrasing."
+    },
+    "clients.wizard.batch.errors.country_length": {
+      "en": "Country must be a 2-letter ISO code",
+      "ar": "يجب أن يكون رمز الدولة من حرفين وفق معيار ISO",
+      "confidence": "medium",
+      "reason": "A reviewer may prefer \"برمز\" over \"رمز\" and may drop the trailing \"ISO\" if the UI never shows the user the code anyway."
+    },
+    "clients.wizard.batch.errors.accessLevel_invalid": {
+      "en": "Access level must be \"full\" or \"read_only\"",
+      "ar": "مستوى الوصول يجب أن يكون \"full\" أو \"read_only\"",
+      "confidence": "medium",
+      "reason": "The quoted tokens are deliberately kept in Latin so the message matches the CSV the user pasted. Reviewer may rephrase the leading clause."
+    },
+    "clients.wizard.batch.errors.engagementType_invalid": {
+      "en": "Engagement type must be \"ongoing\" or \"periodic\"",
+      "ar": "نوع الارتباط يجب أن يكون \"ongoing\" أو \"periodic\"",
+      "confidence": "medium",
+      "reason": "Same note as accessLevel_invalid."
+    },
+    "clients.wizard.batch.errors.shopOwnerEmail_invalid": {
+      "en": "Shop owner email is not a valid email address",
+      "ar": "بريد مالك المنشأة ليس عنواناً إلكترونياً صالحاً",
+      "confidence": "medium",
+      "reason": "Double \"email\" in English; Arabic drops the second mention. Reviewer to confirm."
+    },
+    "firms.dashboard.vat_returns.period_range": {
+      "en": "{{start}} to {{end}}",
+      "ar": "من {{start}} إلى {{end}}",
+      "confidence": "high",
+      "reason": "Standard preposition pair for a date range."
+    },
+    "checker.q10_erp": {
+      "en": "Do you use an ERP or accounting system? (optional)",
+      "ar": "هل تستخدم نظام تخطيط موارد (ERP) أو برنامج محاسبة؟ (اختياري)",
+      "confidence": "medium",
+      "reason": "Pre-existing. Common fuller form is \"نظام تخطيط موارد المؤسسة\". Reviewer to decide if the shorter form reads well to an Omani SME."
+    },
+    "checker.q5_vatRegistered": {
+      "en": "Is your business registered for VAT in Oman?",
+      "ar": "هل منشأتك مسجّلة في ضريبة القيمة المضافة في عُمان؟",
+      "confidence": "medium",
+      "reason": "Pre-existing. A reviewer may prefer \"مسجّلة لضريبة القيمة المضافة\" (registered FOR) over \"مسجّلة في\" (registered IN)."
+    },
+    "checker.subtitle": {
+      "en": "Answer 10 quick questions to see how ready your business is for Oman e-invoicing.",
+      "ar": "أجب عن 10 أسئلة قصيرة لمعرفة مدى جاهزية منشأتك للفوترة الإلكترونية في عُمان.",
+      "confidence": "medium",
+      "reason": "Pre-existing long sentence. Phrasing is correct but a native reviewer may tighten it."
+    },
+    "firms.bootstrap.subtitle": {
+      "en": "Set up a firm profile so you can start managing client tenants from one place.",
+      "ar": "أنشئ ملف المكتب لتتمكن من إدارة منشآت عملائك من مكان واحد.",
+      "confidence": "medium",
+      "reason": "Pre-existing. Reviewer to confirm \"ملف المكتب\" vs \"صفحة المكتب\" or \"بروفايل المكتب\"."
+    },
+    "firms.bootstrap.vatin_hint": {
+      "en": "Optional. Add it later from firm settings if you do not have one yet.",
+      "ar": "اختياري. يمكنك إضافته لاحقاً من إعدادات المكتب إذا لم يكن لديك واحد الآن.",
+      "confidence": "medium",
+      "reason": "Pre-existing. \"لديك واحد الآن\" is colloquial; reviewer may prefer \"إذا لم يكن لديك رقم ضريبي بعد\"."
+    },
+    "ops.validateAll.body": {
+      "en": "Dry-run the compliance pipeline against every DRAFT invoice in every client tenant. Nothing is changed.",
+      "ar": "تشغيل تجريبي لمحرّك الامتثال على كل الفواتير بحالة DRAFT لدى كل عميل. لا يتم تغيير أي شيء.",
+      "confidence": "low",
+      "reason": "Pre-existing compliance-engineering copy. \"محرّك الامتثال\" is a direct calque; may be clearer as \"فحوصات الامتثال\". The Latin \"DRAFT\" state token should stay (it's what the API returns) but \"بحالة DRAFT\" may read oddly."
+    },
+    "imports.wizard.subtitle": {
+      "en": "Bring your client's existing books into Faatora from Tally or Zoho Books.",
+      "ar": "استورد دفاتر عملائك الحالية إلى فاتورة من Tally أو Zoho Books.",
+      "confidence": "medium",
+      "reason": "Pre-existing. References the brand as \"فاتورة\" which again depends on the brand-name decision above."
+    },
+    "clients.wizard.single.success": {
+      "en": "{{name}} has been added to your firm.",
+      "ar": "تمت إضافة {{name}} إلى مكتبك.",
+      "confidence": "medium",
+      "reason": "Pre-existing. Correct; reviewer to confirm no gender agreement is needed on \"تمت\"."
+    },
+    "clients.wizard.single.successHint": {
+      "en": "You can act as this client from the client list.",
+      "ar": "يمكنك العمل نيابة عن هذا العميل من قائمة العملاء.",
+      "confidence": "medium",
+      "reason": "Pre-existing. \"العمل نيابة عن\" is a reasonable rendering of \"act as\" but may be clearer as \"الدخول إلى حساب هذا العميل\"."
+    }
+  }
+}

@@ -388,7 +388,10 @@ function VatReturnsPanel({ returns }: { returns: FirmDashboardVatReturn[] }) {
                   {v.tenantName}
                 </p>
                 <p className="mt-1 text-start text-xs text-slate-500">
-                  {v.periodStart} to {v.periodEnd}
+                  {t('firms.dashboard.vat_returns.period_range', {
+                    start: v.periodStart,
+                    end: v.periodEnd,
+                  })}
                 </p>
                 <p className="mt-0.5 text-start text-xs text-slate-500">
                   {t('firms.dashboard.vat_returns.due', { date: v.dueDate })}
