@@ -160,6 +160,20 @@ resource "aws_ecs_task_definition" "app" {
     Name        = "${local.name_prefix}-app"
     Environment = var.environment
   }
+
+  # Terraform bootstraps this task-def with a placeholder image
+  # (var.container_image defaults to "placeholder:latest") so the
+  # service can be created before any API image exists in ECR. Every
+  # subsequent apply would otherwise re-register this exact same
+  # placeholder revision, superseding whatever real-image revision
+  # the deploy workflow's register-task-definition step just pushed
+  # and racing the service back to CannotPullContainerError on
+  # docker.io/library/placeholder:latest. Ignoring
+  # container_definitions here hands ownership of the image/env/log
+  # config to the deploy pipeline from the second deploy onwards.
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
 }
 
 data "aws_region" "current" {}
@@ -190,8 +204,19 @@ resource "aws_ecs_service" "app" {
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
 
+  # The deploy workflow's update-service step repoints the service at
+  # a freshly-registered task-def revision (see register-task-def
+  # step in .github/workflows/deploy-staging.yml). If Terraform kept
+  # ownership of task_definition, every apply would race the service
+  # back to its own placeholder revision and recreate the
+  # CannotPullContainerError crashloop. ignore_changes on both
+  # desired_count (set by the deploy pipeline when scaling) and
+  # task_definition (set by the deploy pipeline on each image push)
+  # keeps Terraform in charge of the service's structural config
+  # (network, SGs, load-balancer binding) and the pipeline in charge
+  # of the rolling image updates.
   lifecycle {
-    ignore_changes = [desired_count]
+    ignore_changes = [desired_count, task_definition]
   }
 
   depends_on = [aws_lb_listener.http]
