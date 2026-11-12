@@ -15,7 +15,14 @@ concurrency:
 jobs:
   build:
     name: Lint, typecheck, test
-    runs-on: ubuntu-latest
+    # Pinned to 24.04 because ubuntu-latest has rolled to 26.04, which
+    # Playwright 1.56.0 does not yet support -- `playwright install
+    # chromium --with-deps` fails with "Playwright does not support
+    # chromium on ubuntu26.04-x64". 24.04 is a maintained LTS and the
+    # most recent runner image that Playwright 1.56 officially
+    # supports. Unpin once Playwright publishes a 26.04-compatible
+    # release.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -85,6 +92,17 @@ jobs:
 
       - name: Run migrations against ephemeral postgres
         run: pnpm --filter @faatora/api exec node-pg-migrate up --no-check-order -m migrations -d MIGRATION_DATABASE_URL
+
+      # The compliance PDF renderer tests drive headless Chromium
+      # through Playwright. The default GitHub-hosted runner image
+      # bundles Playwright node_modules via pnpm install, but not the
+      # browser binaries, so chromium.launch() fails with:
+      #   browserType.launch: Executable doesn't exist at
+      #   /home/runner/.cache/ms-playwright/chromium_headless_shell-*
+      # --with-deps also installs the OS-level libs (libnss3, libatk,
+      # etc.) that Chromium needs to boot on a stock ubuntu-latest.
+      - name: Install Playwright Chromium
+        run: pnpm --filter @faatora/compliance exec playwright install chromium --with-deps
 
       - name: Compliance tests
         run: pnpm --filter @faatora/compliance test
