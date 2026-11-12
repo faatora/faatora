@@ -15,8 +15,9 @@
  *   4. semantic → pint-om   — derive when pint-om is absent
  *   5. pint-om → UBL        — derive when UBL is absent
  *   6. XSD-lite             — structural checks on the UBL
- *   7. Schematron-lite      — business rules on the semantic invoice
- *   8. `ok = errors.length === 0`
+ *   7. Schematron-lite      — EN 16931 / BR-CO / BR-OM-* on semantic
+ *   8. OM-R-*               — Oman-local rules (vat cat, RC note, …)
+ *   9. `ok = errors.length === 0`
  */
 
 import type { CanonicalInvoice } from '../canonical/types.js';
@@ -27,6 +28,7 @@ import type { PintOmInvoice } from '../pint-om/types.js';
 import type { SemanticInvoice } from '../semantic/en16931.js';
 import { canonicalToSemantic } from '../semantic/map.js';
 import { pintOmToUbl } from '../ubl/serializer.js';
+import { runOmRules } from './om-rules.js';
 import { runSchematron } from './schematron-lite.js';
 import type { ValidationIssue, ValidationReport } from './types.js';
 import { validateVatArithmetic } from './vat-math.js';
@@ -110,6 +112,15 @@ export function validateInvoice(input: PipelineInput): ValidationReport {
   // 7. Schematron-lite (business rules).
   if (semantic !== undefined) {
     collected.push(...runSchematron(semantic));
+  }
+
+  // 8. OM-R-* (Oman-specific business rules).
+  //    Kept distinct from Schematron-lite so the generic EN 16931 /
+  //    BR-CO layer stays reusable across jurisdictions. Emits with
+  //    stage="schematron" so downstream filters treat it as part of
+  //    the same business-rule bucket.
+  if (semantic !== undefined) {
+    collected.push(...runOmRules(semantic));
   }
 
   const { errors, warnings } = split(collected);
