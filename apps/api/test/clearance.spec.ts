@@ -89,6 +89,32 @@ describe('ClearanceGatewayService', () => {
     return id;
   }
 
+  // Poll clearanceEvents until the asp_callback row written by the
+  // StubAspProvider's setTimeout(50ms) is persisted. Replaces a plain
+  // 150ms sleep that was intermittently insufficient on busy CI
+  // runners -- the test became flaky as:
+  //   expect(cbEvent).toBeDefined()  // Received: undefined
+  // Polls at 20ms intervals for up to 3000ms (a generous 60x the
+  // delay) so a real failure still surfaces fast locally, and
+  // transient CI load does not fail the suite.
+  async function waitForCallbackEvent(
+    tenantId: string,
+    invoiceId: string,
+    timeoutMs = 3000,
+  ): Promise<typeof clearanceEvents.$inferSelect | undefined> {
+    const started = Date.now();
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const events = await withTenant(db, tenantId, (tx) =>
+        tx.select().from(clearanceEvents).where(eq(clearanceEvents.invoiceId, invoiceId)),
+      );
+      const cb = events.find((e) => e.actor === 'asp_callback');
+      if (cb) return cb;
+      if (Date.now() - started >= timeoutMs) return undefined;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+  }
+
   function makeGateway(
     provider?: TransmissionProvider,
     opts: { archive?: ArchiveService | null } = {},
@@ -428,20 +454,15 @@ describe('ClearanceGatewayService', () => {
     const report = await gw.drainOnce(10);
     expect(report.pending).toBe(1);
 
-    // Wait for the setTimeout(50ms) callback to fire and process.
-    await new Promise((r) => setTimeout(r, 150));
+    // Wait (polling) for the stub-asp's async callback to persist.
+    const cbEvent = await waitForCallbackEvent(tenant, seed.invoiceId);
+    expect(cbEvent).toBeDefined();
+    expect(cbEvent?.toState).toBe('CLEARED');
 
     const inv = await withTenant(db, tenant, (tx) =>
       tx.select().from(invoices).where(eq(invoices.id, seed.invoiceId)),
     );
     expect(inv[0].status).toBe('CLEARED');
-
-    const events = await withTenant(db, tenant, (tx) =>
-      tx.select().from(clearanceEvents).where(eq(clearanceEvents.invoiceId, seed.invoiceId)),
-    );
-    const cbEvent = events.find((e) => e.actor === 'asp_callback');
-    expect(cbEvent).toBeDefined();
-    expect(cbEvent?.toState).toBe('CLEARED');
   });
 
   it('handleCallback is idempotent: replaying the same callback is a no-op', async () => {
@@ -460,13 +481,16 @@ describe('ClearanceGatewayService', () => {
     process.env.STUB_ASP_MODE = 'async';
     await gw.enqueue(tenant, seed.invoiceId);
     await gw.drainOnce(10);
-    await new Promise((r) => setTimeout(r, 150));
+
+    // Wait (polling) for the stub-asp's async callback to land before
+    // taking a snapshot of clearanceEvents. Previously a 150ms sleep,
+    // intermittently insufficient under CI load.
+    const cbEvent = await waitForCallbackEvent(tenant, seed.invoiceId);
+    expect(cbEvent).toBeDefined();
 
     const before = await withTenant(db, tenant, (tx) =>
       tx.select().from(clearanceEvents).where(eq(clearanceEvents.invoiceId, seed.invoiceId)),
     );
-    const cbEvent = before.find((e) => e.actor === 'asp_callback');
-    expect(cbEvent).toBeDefined();
 
     // Replay the exact same ASP callback — invoice is already CLEARED, so
     // handleCallback must see the terminal state and no-op.
