@@ -54,6 +54,16 @@ export interface BillingSubscriptionUpdatedEvent {
   status?: string;
   [k: string]: unknown;
 }
+export interface FirmTaxDocumentCreatedEvent {
+  firmId: string;
+  tenantId: string;
+  taxDocumentId: string;
+  originalInvoiceId: string;
+  kind: 'credit_note' | 'debit_note';
+  number: string;
+  actorUserId: string;
+  [k: string]: unknown;
+}
 
 /**
  * AuditSubscribers — the audit log's write side.
@@ -104,6 +114,16 @@ export class AuditSubscribers {
   @OnEvent('firm.import.committed', { async: true, promisify: true })
   async onFirmImportCommitted(evt: FirmImportCommittedEvent): Promise<void> {
     await this.safeRecord('firm.import.committed', {
+      firmId: evt.firmId,
+      tenantId: evt.tenantId,
+      actorUserId: evt.actorUserId,
+      payload: this.stripKnown(evt, ['firmId', 'tenantId', 'actorUserId']),
+    });
+  }
+
+  @OnEvent('firm.tax_document.created', { async: true, promisify: true })
+  async onFirmTaxDocumentCreated(evt: FirmTaxDocumentCreatedEvent): Promise<void> {
+    await this.safeRecord('firm.tax_document.created', {
       firmId: evt.firmId,
       tenantId: evt.tenantId,
       actorUserId: evt.actorUserId,

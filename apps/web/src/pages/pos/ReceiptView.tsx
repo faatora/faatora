@@ -15,6 +15,11 @@ export function ReceiptView({ sale, onNewSale }: ReceiptViewProps) {
   const { t, i18n } = useTranslation();
   const lang = (i18n.language || 'en').split('-')[0];
   const soldAt = new Date(sale.soldAt);
+  // Force Hindu-Arabic digits even when the active locale is Arabic.
+  // The POS receipt sits next to the till's printer which cannot be assumed
+  // to render Eastern Arabic numerals cleanly, and Omani SMEs have told us
+  // they expect "2027-04-01" style numbers on receipts across both locales.
+  const dateLocale = lang === 'ar' ? 'ar-OM-u-nu-latn' : lang;
   const print = () => window.print();
 
   return (
@@ -34,7 +39,7 @@ export function ReceiptView({ sale, onNewSale }: ReceiptViewProps) {
         </div>
         <div className="flex justify-between py-1">
           <dt className="text-slate-500">{t('pos.soldAt')}</dt>
-          <dd>{soldAt.toLocaleString(lang)}</dd>
+          <dd>{soldAt.toLocaleString(dateLocale)}</dd>
         </div>
       </dl>
 

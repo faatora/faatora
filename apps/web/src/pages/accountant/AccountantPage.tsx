@@ -225,7 +225,7 @@ export function AccountantPage() {
                           </span>
                         )}
                       </Td>
-                      <Td className="text-slate-700">{row.tenantStatus}</Td>
+                      <Td className="text-slate-700">{formatTenantStatus(row.tenantStatus, t)}</Td>
                       <Td className="text-slate-700">{k?.invoiceCount ?? 0}</Td>
                       <Td className="text-slate-700">{k?.overdueArCount ?? 0}</Td>
                       <Td className="text-end">
@@ -285,6 +285,18 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children, className }: { children: React.ReactNode; className?: string }) {
   return <td className={`ps-4 pe-4 py-2 text-start text-sm ${className ?? ''}`}>{children}</td>;
+}
+
+/**
+ * Map the raw backend tenantStatus token onto a translated label. Unknown
+ * tokens fall through to `accountant.status.unknown` so an added status
+ * from the API never leaks an English code into the Arabic UI.
+ */
+function formatTenantStatus(status: string, t: (k: string) => string): string {
+  const token = status.toLowerCase();
+  if (token === 'active') return t('accountant.status.active');
+  if (token === 'suspended' || token === 'inactive') return t('accountant.status.suspended');
+  return t('accountant.status.unknown');
 }
 
 export default AccountantPage;

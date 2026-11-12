@@ -4,3 +4,6 @@
 apps/web/dist
 pnpm-lock.yaml
 **/*.md
+# Generated report — format is driven by apps/web/scripts/i18n-audit.ts,
+# not by prettier, so it does not round-trip cleanly.
+apps/web/scripts/i18n-audit-report.json

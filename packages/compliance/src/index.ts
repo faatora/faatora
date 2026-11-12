@@ -11,6 +11,9 @@ export * from './pint-om/types.js';
 export * from './pint-om/specialize.js';
 export * from './ubl/serializer.js';
 export * from './ubl/parser.js';
+export * from './ubl/credit-note.js';
+export * from './ubl/credit-note-parser.js';
+export * from './ubl/debit-note.js';
 
 export const COMPLIANCE_CORE_VERSION = '0.1.0-ep4';
 
@@ -25,7 +28,11 @@ export type { ValidationIssue, ValidationReport } from './validate/types.js';
 export * from './validate/vat-math.js';
 export * from './validate/xsd-lite.js';
 export * from './validate/schematron-lite.js';
+export * from './validate/om-rules.js';
 export * from './validate/pipeline.js';
 
-// PDF/A-3 renderer (A14).
-export * from './pdf/index.js';
+// Peppol AS4 transport adapter scaffold (see transport/as4/README.md).
+// Signing + wire transmission happen at the partner ASP boundary under
+// the OTA SP §5.7 subcontractor model; this module only produces the
+// typed envelope + port and ships a mock + skeleton HTTP client.
+export * from './transport/as4/index.js';
