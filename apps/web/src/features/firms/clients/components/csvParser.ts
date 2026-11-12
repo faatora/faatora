@@ -71,6 +71,17 @@ export function parseCsv(text: string): ParsedCsv {
   };
 }
 
+/**
+ * A validation error attached to a single CSV row.
+ *
+ * `code` is a stable i18n key (under `clients.wizard.batch.errors.*`) so the
+ * UI can render the message in the active locale. `code` MUST NOT be a
+ * literal English phrase — the UI is the only translator.
+ */
+export interface CsvRowError {
+  code: string;
+}
+
 export interface CsvMappedRow {
   tenantName: string;
   crNumber: string;
@@ -80,8 +91,18 @@ export interface CsvMappedRow {
   engagementType: 'ongoing' | 'periodic';
   shopOwnerEmail?: string;
   _rowIndex: number;
-  _errors: string[];
+  _errors: CsvRowError[];
 }
+
+export const CSV_ERROR_CODES = {
+  tenantNameRequired: 'clients.wizard.batch.errors.tenantName_required',
+  crNumberRequired: 'clients.wizard.batch.errors.crNumber_required',
+  vatinRequired: 'clients.wizard.batch.errors.vatin_required',
+  countryLength: 'clients.wizard.batch.errors.country_length',
+  accessLevelInvalid: 'clients.wizard.batch.errors.accessLevel_invalid',
+  engagementTypeInvalid: 'clients.wizard.batch.errors.engagementType_invalid',
+  shopOwnerEmailInvalid: 'clients.wizard.batch.errors.shopOwnerEmail_invalid',
+} as const;
 
 /**
  * Map a parsed CSV into the DTO shape the onboarding endpoint expects.
@@ -121,19 +142,19 @@ export function mapCsvRows(rows: Record<string, string>[]): CsvMappedRow[] {
     ).toLowerCase();
     const shopOwnerEmail = pick('shopOwnerEmail', 'shop_owner_email', 'email');
 
-    const errors: string[] = [];
-    if (!tenantName) errors.push('tenantName is required');
-    if (!crNumber) errors.push('crNumber is required');
-    if (!vatin) errors.push('vatin is required');
-    if (country.length !== 2) errors.push('country must be a 2-letter code');
+    const errors: CsvRowError[] = [];
+    if (!tenantName) errors.push({ code: CSV_ERROR_CODES.tenantNameRequired });
+    if (!crNumber) errors.push({ code: CSV_ERROR_CODES.crNumberRequired });
+    if (!vatin) errors.push({ code: CSV_ERROR_CODES.vatinRequired });
+    if (country.length !== 2) errors.push({ code: CSV_ERROR_CODES.countryLength });
     if (!['full', 'read_only'].includes(accessLevelRaw)) {
-      errors.push('accessLevel must be full or read_only');
+      errors.push({ code: CSV_ERROR_CODES.accessLevelInvalid });
     }
     if (!['ongoing', 'periodic'].includes(engagementTypeRaw)) {
-      errors.push('engagementType must be ongoing or periodic');
+      errors.push({ code: CSV_ERROR_CODES.engagementTypeInvalid });
     }
     if (shopOwnerEmail && !/^\S+@\S+\.\S+$/.test(shopOwnerEmail)) {
-      errors.push('shopOwnerEmail is not a valid email');
+      errors.push({ code: CSV_ERROR_CODES.shopOwnerEmailInvalid });
     }
     return {
       tenantName,

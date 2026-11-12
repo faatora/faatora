@@ -14,7 +14,11 @@ export function LanguageToggle() {
   const idle = 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50';
 
   return (
-    <div className="inline-flex items-center gap-2" role="group" aria-label="Language">
+    <div
+      className="inline-flex items-center gap-2"
+      role="group"
+      aria-label={t('nav.languageAriaLabel')}
+    >
       <button
         type="button"
         onClick={() => change('en')}

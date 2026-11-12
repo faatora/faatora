@@ -6,7 +6,8 @@
   },
   "nav": {
     "en": "الإنجليزية",
-    "ar": "العربية"
+    "ar": "العربية",
+    "languageAriaLabel": "اللغة"
   },
   "landing": {
     "title": "فحص الجاهزية للفوترة الإلكترونية في عُمان",
@@ -145,6 +146,11 @@
       "name": "العميل",
       "status": "الحالة"
     },
+    "status": {
+      "active": "نشط",
+      "suspended": "موقوف",
+      "unknown": "غير معروف"
+    },
     "loading": "جارٍ التحميل…",
     "loadError": "تعذّر تحميل بيانات المكتب.",
     "pleaseLogIn": "يُرجى تسجيل الدخول للمتابعة."
@@ -256,6 +262,7 @@
         "title": "إقرارات ضريبة القيمة المضافة القادمة",
         "empty": "لا توجد إقرارات قادمة.",
         "due": "الاستحقاق {{date}}",
+        "period_range": "من {{start}} إلى {{end}}",
         "status": {
           "draft": "مسودة",
           "submitted": "مُرسل",
@@ -385,7 +392,14 @@
       "batch.submit": "إضافة {{count}} عميل",
       "batch.submitting": "جارٍ الإضافة…",
       "batch.resultsHeader": "{{created}} تمت إضافته · {{failed}} فشل",
-      "batch.startOver": "رفع دفعة أخرى"
+      "batch.startOver": "رفع دفعة أخرى",
+      "batch.errors.tenantName_required": "اسم منشأة العميل مطلوب",
+      "batch.errors.crNumber_required": "رقم السجل التجاري مطلوب",
+      "batch.errors.vatin_required": "الرقم الضريبي مطلوب",
+      "batch.errors.country_length": "يجب أن يكون رمز الدولة من حرفين وفق معيار ISO",
+      "batch.errors.accessLevel_invalid": "مستوى الوصول يجب أن يكون \"full\" أو \"read_only\"",
+      "batch.errors.engagementType_invalid": "نوع الارتباط يجب أن يكون \"ongoing\" أو \"periodic\"",
+      "batch.errors.shopOwnerEmail_invalid": "بريد مالك المنشأة ليس عنواناً إلكترونياً صالحاً"
     },
     "list": {
       "title": "العملاء",
