@@ -1,26 +1,44 @@
-# Pragmatic multi-stage build for the API. Switches to `pnpm deploy --filter`
-# for a slimmer image before the EP1 deploy step.
+# Build the API inside a pnpm workspace, then use `pnpm deploy` to
+# materialize a self-contained production node_modules tree.
+#
+# Why pnpm deploy (and not just COPY /app/node_modules): a pnpm
+# workspace install leaves each package's direct dependencies as
+# symlinks under apps/api/node_modules/<pkg> pointing into the virtual
+# store at /app/node_modules/.pnpm/. The previous version of this
+# Dockerfile only copied /app/node_modules to the runtime stage and
+# unpacked the API's dist to /app/dist, so Node resolving require()
+# from /app/dist/main.js never traversed the API's own node_modules
+# and crashed with:
+#   Error: Cannot find module '@sentry/node'
+# `pnpm deploy --filter @faatora/api --prod /deploy` resolves every
+# production dependency (including workspace deps like
+# @faatora/compliance) into a single flat /deploy/node_modules, which
+# the runtime stage copies verbatim -- no symlink gymnastics.
 FROM node:22-slim AS build
 RUN corepack enable
 WORKDIR /app
-COPY pnpm-workspace.yaml package.json tsconfig.base.json ./
+# Copy the lockfile so pnpm can honour pinned versions. Dropping
+# --no-frozen-lockfile prevents a drift between host-resolved versions
+# and what was tested on the PR.
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 COPY apps/api ./apps/api
 COPY packages ./packages
-RUN pnpm install --no-frozen-lockfile
-# Compliance ships as a workspace package that points main/types at dist/,
-# so it must be built before the api can resolve @faatora/compliance imports.
+RUN pnpm install --frozen-lockfile
+# Compliance ships as a workspace package that points main/types at
+# dist/, so it must be built before the API can resolve
+# @faatora/compliance imports.
 RUN pnpm --filter @faatora/compliance build
 RUN pnpm --filter @faatora/api build
+# Produce a deploy bundle at /deploy with flat node_modules.
+RUN pnpm deploy --filter @faatora/api --prod /deploy
 
 FROM node:22-slim AS runtime
 RUN corepack enable
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=build /app/apps/api/dist ./dist
-COPY --from=build /app/apps/api/package.json ./
-COPY --from=build /app/packages/compliance/dist ./node_modules/@faatora/compliance/dist
-COPY --from=build /app/packages/compliance/package.json ./node_modules/@faatora/compliance/package.json
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /deploy/dist ./dist
+COPY --from=build /deploy/package.json ./
+COPY --from=build /deploy/node_modules ./node_modules
 
 # Migrate-task payload: the migration SQL files and a standalone
 # node-pg-migrate + pg install under /opt/migrate. This image is
