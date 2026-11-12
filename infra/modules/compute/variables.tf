@@ -95,7 +95,7 @@ variable "rds_master_user_secret_arn" {
 
 variable "ecr_repository_name" {
   type        = string
-  description = "Name of the ECR repository the deploy-image job pushes to. The migrate task definition references `${account}.dkr.ecr.${region}.amazonaws.com/${name}:staging` so a reused image always matches the tag the deploy pipeline publishes."
+  description = "Name of the ECR repository the deploy-image job pushes to. The migrate task definition references $${account}.dkr.ecr.$${region}.amazonaws.com/$${name}:staging so a reused image always matches the tag the deploy pipeline publishes."
   default     = "faatora-api"
 }
 
