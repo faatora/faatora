@@ -76,7 +76,10 @@ async function renderQrPng(payload: string): Promise<string> {
 }
 
 /** Print HTML to PDF through Playwright. */
-async function printHtmlToPdf(html: string, existingBrowser: Browser | undefined): Promise<Uint8Array> {
+async function printHtmlToPdf(
+  html: string,
+  existingBrowser: Browser | undefined,
+): Promise<Uint8Array> {
   const browser = existingBrowser ?? (await chromium.launch({ args: ['--no-sandbox'] }));
   try {
     const context = await browser.newContext();

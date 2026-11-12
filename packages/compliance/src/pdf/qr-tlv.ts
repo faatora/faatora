@@ -148,7 +148,9 @@ export function decodeTlv(bytes: Uint8Array): TlvTriple[] {
       len = (bytes[i + 2]! << 8) | bytes[i + 3]!;
       hdr = 4;
     } else {
-      throw new Error(`Unsupported TLV long-form indicator 0x${first.toString(16)} at offset ${String(i)}`);
+      throw new Error(
+        `Unsupported TLV long-form indicator 0x${first.toString(16)} at offset ${String(i)}`,
+      );
     }
     if (i + hdr + len > bytes.length) {
       throw new Error(
