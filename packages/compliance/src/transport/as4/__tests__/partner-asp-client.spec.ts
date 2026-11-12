@@ -1,8 +1,5 @@
 import { buildAs4UserMessage } from '../envelope.js';
-import {
-  makeIso6523ParticipantId,
-  PEPPOL_BIS_BILLING_3_INVOICE,
-} from '../metadata.js';
+import { makeIso6523ParticipantId, PEPPOL_BIS_BILLING_3_INVOICE } from '../metadata.js';
 import {
   PartnerAspClient,
   PartnerAspHttpError,
@@ -41,13 +38,13 @@ class ScriptedPartnerAspClient extends PartnerAspClient {
   ) {
     super(opts);
   }
-  protected override async sendOnce(
-    _msg: As4OutboundMessage,
-  ): Promise<As4SendResult> {
+  protected override async sendOnce(_msg: As4OutboundMessage): Promise<As4SendResult> {
     const step = this.script[this.attempts];
     this.attempts += 1;
     if (!step) {
-      throw new Error(`ScriptedPartnerAspClient: ran off the end of the script at attempt ${this.attempts}`);
+      throw new Error(
+        `ScriptedPartnerAspClient: ran off the end of the script at attempt ${this.attempts}`,
+      );
     }
     if (step instanceof Error) throw step;
     return step;
@@ -56,14 +53,12 @@ class ScriptedPartnerAspClient extends PartnerAspClient {
 
 describe('PartnerAspClient construction', () => {
   it('rejects empty baseUrl', () => {
-    expect(() => new PartnerAspClient({ baseUrl: '', apiKey: 'k' })).toThrow(
-      /baseUrl/,
-    );
+    expect(() => new PartnerAspClient({ baseUrl: '', apiKey: 'k' })).toThrow(/baseUrl/);
   });
   it('rejects empty apiKey', () => {
-    expect(
-      () => new PartnerAspClient({ baseUrl: 'https://asp.example', apiKey: '' }),
-    ).toThrow(/apiKey/);
+    expect(() => new PartnerAspClient({ baseUrl: 'https://asp.example', apiKey: '' })).toThrow(
+      /apiKey/,
+    );
   });
   it('exposes resolved config with defaults', () => {
     const c = new PartnerAspClient({
@@ -134,10 +129,7 @@ describe('PartnerAspClient retry policy', () => {
           sleeps.push(ms);
         },
       },
-      [
-        new PartnerAspNetworkError('ECONNRESET'),
-        { status: 'accepted', messageId: 'msg-xyz' },
-      ],
+      [new PartnerAspNetworkError('ECONNRESET'), { status: 'accepted', messageId: 'msg-xyz' }],
     );
     const res = await client.send(message());
     expect(res.status).toBe('accepted');

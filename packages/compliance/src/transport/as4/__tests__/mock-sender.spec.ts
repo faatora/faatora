@@ -1,8 +1,5 @@
 import { buildAs4UserMessage } from '../envelope.js';
-import {
-  makeIso6523ParticipantId,
-  PEPPOL_BIS_BILLING_3_INVOICE,
-} from '../metadata.js';
+import { makeIso6523ParticipantId, PEPPOL_BIS_BILLING_3_INVOICE } from '../metadata.js';
 import { MockAs4Sender } from '../adapters/mock.js';
 import type { As4OutboundMessage } from '../types.js';
 
@@ -34,10 +31,7 @@ describe('MockAs4Sender', () => {
     const sender = new MockAs4Sender();
     await sender.send(sampleOutbound('msg-001'));
     await sender.send(sampleOutbound('msg-002'));
-    expect(sender.sent.map((m) => m.envelope.messageId)).toEqual([
-      'msg-001',
-      'msg-002',
-    ]);
+    expect(sender.sent.map((m) => m.envelope.messageId)).toEqual(['msg-001', 'msg-002']);
   });
 
   it('invokes the injected logger exactly once per send', async () => {

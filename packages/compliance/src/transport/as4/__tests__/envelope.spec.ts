@@ -29,9 +29,7 @@ describe('buildAs4UserMessage', () => {
 
     expect(env.messageId).toBe('11111111-2222-3333-4444-555555555555');
     expect(env.timestamp).toBe('2026-11-12T08:30:00.000Z');
-    expect(env.collaborationInfo.conversationId).toBe(
-      'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-    );
+    expect(env.collaborationInfo.conversationId).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
   });
 
   it('uses the Peppol-mandated roles on From and To', () => {
@@ -56,12 +54,8 @@ describe('buildAs4UserMessage', () => {
       documentTypeId: PEPPOL_BIS_BILLING_3_INVOICE,
       payloadCid: 'cid:p@x',
     });
-    expect(formatParticipantId(env.from.partyId)).toBe(
-      'iso6523-actorid-upis::9915:faatora-c2',
-    );
-    expect(formatParticipantId(env.to.partyId)).toBe(
-      'iso6523-actorid-upis::9915:partner-c3',
-    );
+    expect(formatParticipantId(env.from.partyId)).toBe('iso6523-actorid-upis::9915:faatora-c2');
+    expect(formatParticipantId(env.to.partyId)).toBe('iso6523-actorid-upis::9915:partner-c3');
     expect(formatParticipantId(env.messageProperties.originalSender)).toBe(
       'iso6523-actorid-upis::9915:om-seller-1',
     );
@@ -79,13 +73,9 @@ describe('buildAs4UserMessage', () => {
       documentTypeId: PEPPOL_BIS_BILLING_3_INVOICE,
       payloadCid: 'cid:p@x',
     });
-    expect(env.collaborationInfo.agreementRef).toBe(
-      'urn:fdc:peppol.eu:2017:agreements:tia:bis3',
-    );
+    expect(env.collaborationInfo.agreementRef).toBe('urn:fdc:peppol.eu:2017:agreements:tia:bis3');
     expect(env.collaborationInfo.service).toEqual(PEPPOL_BIS_BILLING_3_PROCESS);
-    expect(env.collaborationInfo.service.value).toBe(
-      'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0',
-    );
+    expect(env.collaborationInfo.service.value).toBe('urn:fdc:peppol.eu:2017:poacc:billing:01:1.0');
     expect(formatDocumentTypeId(env.collaborationInfo.action)).toBe(
       formatDocumentTypeId(PEPPOL_BIS_BILLING_3_INVOICE),
     );

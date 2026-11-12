@@ -173,10 +173,8 @@ export const PEPPOL = {
   /** Peppol BIS Billing 3.0 process identifier (the `eb:Service` value). */
   billingProcessId: 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0',
   /** ebMS roles. */
-  initiatorRole:
-    'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/initiator',
-  responderRole:
-    'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/responder',
+  initiatorRole: 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/initiator',
+  responderRole: 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/responder',
   /** Part property keys Peppol TIA requires on the payload PartInfo. */
   partProps: {
     mimeType: 'MimeType',

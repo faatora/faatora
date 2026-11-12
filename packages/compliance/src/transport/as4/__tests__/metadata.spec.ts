@@ -25,17 +25,13 @@ describe('Peppol participant ID', () => {
   });
 
   it('parse keeps colons inside the identifier intact', () => {
-    const parsed = parseParticipantId(
-      'iso6523-actorid-upis::9915:om:seller:1',
-    );
+    const parsed = parseParticipantId('iso6523-actorid-upis::9915:om:seller:1');
     expect(parsed.scheme).toBe('iso6523-actorid-upis');
     expect(parsed.identifier).toBe('9915:om:seller:1');
   });
 
   it('rejects missing separator', () => {
-    expect(() => parseParticipantId('iso6523-actorid-upis')).toThrow(
-      /scheme::identifier/,
-    );
+    expect(() => parseParticipantId('iso6523-actorid-upis')).toThrow(/scheme::identifier/);
   });
 
   it('rejects empty halves', () => {
@@ -44,21 +40,17 @@ describe('Peppol participant ID', () => {
   });
 
   it('rejects empty scheme / identifier on format', () => {
-    expect(() =>
-      formatParticipantId({ scheme: '', identifier: '9915:x' }),
-    ).toThrow(/scheme/);
-    expect(() =>
-      formatParticipantId({ scheme: 'iso6523-actorid-upis', identifier: '' }),
-    ).toThrow(/identifier/);
+    expect(() => formatParticipantId({ scheme: '', identifier: '9915:x' })).toThrow(/scheme/);
+    expect(() => formatParticipantId({ scheme: 'iso6523-actorid-upis', identifier: '' })).toThrow(
+      /identifier/,
+    );
   });
 
   it('makeIso6523ParticipantId uses the Peppol default scheme', () => {
     const id = makeIso6523ParticipantId('9915', 'om-seller-1');
     expect(id.scheme).toBe(PEPPOL.participantScheme);
     expect(id.identifier).toBe('9915:om-seller-1');
-    expect(formatParticipantId(id)).toBe(
-      'iso6523-actorid-upis::9915:om-seller-1',
-    );
+    expect(formatParticipantId(id)).toBe('iso6523-actorid-upis::9915:om-seller-1');
   });
 });
 
@@ -77,9 +69,7 @@ describe('Peppol document type ID', () => {
   it('parse extracts every component', () => {
     const parsed = parseDocumentTypeId(invoiceRaw);
     expect(parsed.scheme).toBe('busdox-docid-qns');
-    expect(parsed.rootNs).toBe(
-      'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
-    );
+    expect(parsed.rootNs).toBe('urn:oasis:names:specification:ubl:schema:xsd:Invoice-2');
     expect(parsed.localName).toBe('Invoice');
     expect(parsed.customizationId).toBe(
       'urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0',
@@ -95,12 +85,8 @@ describe('Peppol document type ID', () => {
   });
 
   it('rejects malformed input', () => {
-    expect(() => parseDocumentTypeId('busdox-docid-qns::no-hash-marker::2.1')).toThrow(
-      /##/,
-    );
-    expect(() => parseDocumentTypeId('busdox-docid-qns::only-two')).toThrow(
-      /rootNs separator|##/,
-    );
+    expect(() => parseDocumentTypeId('busdox-docid-qns::no-hash-marker::2.1')).toThrow(/##/);
+    expect(() => parseDocumentTypeId('busdox-docid-qns::only-two')).toThrow(/rootNs separator|##/);
     expect(() => parseDocumentTypeId('no-scheme-separator')).toThrow(/scheme/);
   });
 });

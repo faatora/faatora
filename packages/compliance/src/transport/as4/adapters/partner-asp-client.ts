@@ -61,7 +61,10 @@ export class PartnerAspHttpError extends Error {
 
 /** Thrown for network-level failures (DNS, TCP, TLS, dropped socket). */
 export class PartnerAspNetworkError extends Error {
-  constructor(message: string, readonly cause?: unknown) {
+  constructor(
+    message: string,
+    readonly cause?: unknown,
+  ) {
     super(message);
     this.name = 'PartnerAspNetworkError';
   }
@@ -166,12 +169,8 @@ export class PartnerAspClient implements As4Sender {
     return Math.min(raw, this.maxBackoffMs);
   }
 
-  private toErrorResult(
-    message: As4OutboundMessage,
-    err: unknown,
-  ): As4SendResult {
-    const errText =
-      err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  private toErrorResult(message: As4OutboundMessage, err: unknown): As4SendResult {
+    const errText = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
     const status: As4SendResult['status'] =
       err instanceof PartnerAspHttpError && err.status >= 400 && err.status < 500
         ? 'rejected'

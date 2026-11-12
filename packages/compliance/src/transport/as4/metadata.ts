@@ -55,16 +55,12 @@ export function formatParticipantId(id: PeppolParticipantId): string {
 export function parseParticipantId(raw: string): PeppolParticipantId {
   const idx = raw.indexOf('::');
   if (idx < 0) {
-    throw new Error(
-      `Peppol participant ID: expected 'scheme::identifier', got '${raw}'`,
-    );
+    throw new Error(`Peppol participant ID: expected 'scheme::identifier', got '${raw}'`);
   }
   const scheme = raw.slice(0, idx);
   const identifier = raw.slice(idx + 2);
   if (!scheme || !identifier) {
-    throw new Error(
-      `Peppol participant ID: empty scheme or identifier in '${raw}'`,
-    );
+    throw new Error(`Peppol participant ID: empty scheme or identifier in '${raw}'`);
   }
   return { scheme, identifier };
 }
@@ -74,10 +70,7 @@ export function parseParticipantId(raw: string): PeppolParticipantId {
  * `icd` is the Peppol-assigned issuing-code (e.g. `9915` for Oman VAT
  * for the test network), `localId` is the recipient's registered ID.
  */
-export function makeIso6523ParticipantId(
-  icd: string,
-  localId: string,
-): PeppolParticipantId {
+export function makeIso6523ParticipantId(icd: string, localId: string): PeppolParticipantId {
   return {
     scheme: PEPPOL.participantScheme,
     identifier: `${icd}:${localId}`,
@@ -162,8 +155,7 @@ export const PEPPOL_BIS_BILLING_3_INVOICE: PeppolDocumentTypeId = Object.freeze(
   scheme: PEPPOL.documentTypeScheme,
   rootNs: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
   localName: 'Invoice',
-  customizationId:
-    'urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0',
+  customizationId: 'urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0',
   ublVersion: '2.1',
 });
 
@@ -174,8 +166,7 @@ export const PEPPOL_BIS_BILLING_3_CREDIT_NOTE: PeppolDocumentTypeId = Object.fre
   scheme: PEPPOL.documentTypeScheme,
   rootNs: 'urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2',
   localName: 'CreditNote',
-  customizationId:
-    'urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0',
+  customizationId: 'urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0',
   ublVersion: '2.1',
 });
 
