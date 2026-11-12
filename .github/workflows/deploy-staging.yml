@@ -370,27 +370,80 @@ jobs:
           TASK_DEF_FAMILY: ${{ env.ECS_SERVICE }}
         run: |
           set -euo pipefail
+
           # Pull the current task definition the service is on.
-          CURRENT=$(aws ecs describe-task-definition \
+          # --output json is explicit even though it is the AWS CLI v2
+          # default: the previous revision of this step omitted it and
+          # the register step later tripped on empty stdin when a stray
+          # AWS_DEFAULT_OUTPUT=text in the runner environment made
+          # describe-task-definition emit tab-separated text instead of
+          # JSON, which jq then silently collapsed to nothing.
+          aws ecs describe-task-definition \
             --task-definition "$TASK_DEF_FAMILY" \
             --region "$AWS_TF_STATE_REGION" \
-            --query 'taskDefinition')
+            --query 'taskDefinition' \
+            --output json \
+            > /tmp/task-def-current.json
+
+          # Sanity-check the describe output before handing to jq. An
+          # empty file or non-JSON body here means the task-def family
+          # does not exist or the role is missing the describe
+          # permission -- fail loudly with the actual body shown in the
+          # log instead of letting the register step emit "Invalid JSON
+          # received" against empty stdin.
+          if [ ! -s /tmp/task-def-current.json ] \
+             || ! jq empty /tmp/task-def-current.json 2>/dev/null; then
+            echo "::error::describe-task-definition did not return JSON" \
+                 "for family $TASK_DEF_FAMILY. Body was:" >&2
+            cat /tmp/task-def-current.json >&2 || true
+            exit 1
+          fi
+
           # Swap the first container's image. Strip the server-managed
-          # fields that `register-task-definition` rejects.
-          NEW=$(echo "$CURRENT" | jq \
+          # fields that `register-task-definition` rejects (otherwise
+          # it errors with ParamValidation on each one).
+          jq \
             --arg img "$IMAGE_URI" \
             '.containerDefinitions[0].image = $img
              | del(.taskDefinitionArn, .revision, .status,
                    .requiresAttributes, .compatibilities,
-                   .registeredAt, .registeredBy)')
-          # Register and capture the new revision ARN for the next step.
-          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition \
-            --cli-input-json file:///dev/stdin \
+                   .registeredAt, .registeredBy)' \
+            /tmp/task-def-current.json \
+            > /tmp/task-def-new.json
+
+          # Register and capture the new revision ARN for the next
+          # step. Pass the request body as a file:// URL -- it's more
+          # portable than piping to /dev/stdin and the request body
+          # ends up in /tmp where the log step below can show it on a
+          # failure.
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file:///tmp/task-def-new.json \
             --region "$AWS_TF_STATE_REGION" \
             --query 'taskDefinition.taskDefinitionArn' \
             --output text)
+
           echo "Registered new revision: $NEW_ARN"
           echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
+
+      # Emits the image that was baked into the new revision on
+      # success, and the full request body on failure -- so a bad
+      # describe output or a jq slip is diagnosable from the log
+      # without re-running with debug.
+      - name: Show new revision contents
+        if: always() && steps.register.conclusion != 'skipped'
+        run: |
+          set +e
+          echo "=== intended image ===" >&2
+          jq -r '.containerDefinitions[0].image' /tmp/task-def-new.json >&2 \
+            || echo "(no task-def-new.json)" >&2
+          if [ "${{ steps.register.outcome }}" != "success" ]; then
+            echo "=== /tmp/task-def-current.json ===" >&2
+            cat /tmp/task-def-current.json >&2 2>/dev/null \
+              || echo "(no task-def-current.json)" >&2
+            echo "=== /tmp/task-def-new.json ===" >&2
+            cat /tmp/task-def-new.json >&2 2>/dev/null \
+              || echo "(no task-def-new.json)" >&2
+          fi
 
       # Roll onto the newly-registered revision. Previously this step
       # passed `--force-new-deployment` alone, which just replayed the
