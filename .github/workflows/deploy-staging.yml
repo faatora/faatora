@@ -341,10 +341,12 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push API image
+        id: build
         env:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          set -euo pipefail
           docker build \
             -f docker/api.Dockerfile \
             -t "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG" \
@@ -352,15 +354,56 @@ jobs:
             .
           docker push "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG"
           docker push "$REGISTRY/${ECR_REPOSITORY}:staging"
+          echo "image_uri=$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      # ECS resources were provisioned by terraform-apply in the state
-      # region (us-east-1) because the opt-in me-south-1 is not enabled
-      # for this account. Using AWS_TF_STATE_REGION here to match.
-      - name: Force new ECS deployment
+      # Register a new task-def revision that actually points at the image
+      # we just pushed. Without this step, the Terraform compute module
+      # keeps the container image pinned to its placeholder default
+      # ("placeholder:latest"), and `update-service --force-new-deployment`
+      # alone just replays that broken revision -> CannotPullContainerError
+      # crashloop. The flow has to be: push image -> patch container
+      # image in a fresh task-def revision -> point service at it.
+      - name: Register task definition revision with real image
+        id: register
+        env:
+          IMAGE_URI: ${{ steps.build.outputs.image_uri }}
+          TASK_DEF_FAMILY: ${{ env.ECS_SERVICE }}
         run: |
+          set -euo pipefail
+          # Pull the current task definition the service is on.
+          CURRENT=$(aws ecs describe-task-definition \
+            --task-definition "$TASK_DEF_FAMILY" \
+            --region "$AWS_TF_STATE_REGION" \
+            --query 'taskDefinition')
+          # Swap the first container's image. Strip the server-managed
+          # fields that `register-task-definition` rejects.
+          NEW=$(echo "$CURRENT" | jq \
+            --arg img "$IMAGE_URI" \
+            '.containerDefinitions[0].image = $img
+             | del(.taskDefinitionArn, .revision, .status,
+                   .requiresAttributes, .compatibilities,
+                   .registeredAt, .registeredBy)')
+          # Register and capture the new revision ARN for the next step.
+          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition \
+            --cli-input-json file:///dev/stdin \
+            --region "$AWS_TF_STATE_REGION" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          echo "Registered new revision: $NEW_ARN"
+          echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
+
+      # Roll onto the newly-registered revision. Previously this step
+      # passed `--force-new-deployment` alone, which just replayed the
+      # broken placeholder revision; always pair it with `--task-definition`.
+      - name: Update ECS service to new task definition
+        env:
+          TASK_DEF_ARN: ${{ steps.register.outputs.task_def_arn }}
+        run: |
+          set -euo pipefail
           aws ecs update-service \
             --cluster "$ECS_CLUSTER" \
             --service "$ECS_SERVICE" \
+            --task-definition "$TASK_DEF_ARN" \
             --force-new-deployment \
             --region "$AWS_TF_STATE_REGION"
 
