@@ -1,0 +1,426 @@
+name: Deploy (production)
+
+# Manually dispatched only — no auto-trigger on main. Production runs in
+# eu-central-1 (Frankfurt) for PDPL/GDPR data residency; the Terraform
+# state bucket and lock table stay in us-east-1 (see
+# infra/environments/production.backend.hcl for the rationale).
+#
+# Every job is pinned to the `production` GitHub Environment, which the
+# repo owner configures with required reviewers; the apply step therefore
+# waits for a human click. The workflow runs end-to-end only after
+# Ahmed has completed infra/MIGRATION-TO-EU-CENTRAL-1.md through "Step 1:
+# Provision new production stack"; the smoke-test job is intentionally
+# skippable while the ACM cert / DNS cutover from that runbook is still
+# in flight.
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_migrations:
+        description: 'Skip DB migrations (emergency only)'
+        type: boolean
+        default: true
+      skip_smoke_test:
+        description: 'Skip the ALB smoke test (until DNS cutover is done)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  # Workload and Terraform-state regions are intentionally different:
+  # resources land in eu-central-1, state lives in us-east-1.
+  AWS_WORKLOAD_REGION: eu-central-1
+  AWS_TF_STATE_REGION: us-east-1
+  AWS_ROLE_ARN: arn:aws:iam::058264142993:role/fawtara-github-deploy
+  TF_STATE_BUCKET: faatora-tfstate
+  TF_LOCK_TABLE: fawtara-tflock
+  ECR_REPOSITORY: faatora-api
+  ECS_CLUSTER: faatora-production-cluster
+  ECS_SERVICE: faatora-production-app
+  TFVARS_FILE: environments/production.tfvars
+  BACKEND_CONFIG: environments/production.backend.hcl
+
+jobs:
+  terraform-plan:
+    name: Terraform plan
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      plan-artifact: ${{ steps.plan-upload.outputs.artifact-id }}
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          # State bucket is in us-east-1; this is the credentials region
+          # for the S3 / DynamoDB backend. Workload calls below use
+          # --region explicitly.
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init -reconfigure -backend-config="${BACKEND_CONFIG}"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -lock-timeout=10m \
+            -var-file="${TFVARS_FILE}" \
+            -out=tfplan.production
+
+      - name: Upload plan
+        id: plan-upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-production-${{ github.sha }}
+          path: infra/tfplan.production
+          retention-days: 7
+
+  terraform-apply:
+    name: Terraform apply (gated)
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    # Second gate on the same environment. GitHub re-prompts reviewers
+    # here so a reviewer can see the uploaded plan artifact before
+    # clicking approve.
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform init
+        run: terraform init -reconfigure -backend-config="${BACKEND_CONFIG}"
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-production-${{ github.sha }}
+          path: infra
+
+      - name: Terraform apply
+        run: terraform apply -lock-timeout=10m tfplan.production
+
+  migrate:
+    name: Run migrations (in-VPC ECS task)
+    needs: terraform-apply
+    if: ${{ github.event.inputs.skip_migrations != 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_TF_STATE_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      # Pull the ECS cluster, migrate task def, network params, and the
+      # migrate container name from terraform state. The state is in
+      # us-east-1 but the resources these outputs point at are in
+      # eu-central-1 — that is fine, Terraform outputs are just strings.
+      - name: Read infra from terraform state
+        id: tf
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          terraform init -reconfigure -backend-config="${BACKEND_CONFIG}"
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          TASK_DEF=$(terraform output -raw migrate_task_definition_arn)
+          TASK_FAMILY=$(terraform output -raw migrate_task_definition_family)
+          CONTAINER=$(terraform output -raw migrate_container_name)
+          LOG_GROUP=$(terraform output -raw migrate_log_group_name)
+          APP_SG=$(terraform output -raw app_security_group_id)
+          SUBNETS=$(terraform output -json private_subnet_ids | jq -r 'join(",")')
+          {
+            echo "cluster=$CLUSTER"
+            echo "task_def=$TASK_DEF"
+            echo "task_family=$TASK_FAMILY"
+            echo "container=$CONTAINER"
+            echo "log_group=$LOG_GROUP"
+            echo "app_sg=$APP_SG"
+            echo "subnets=$SUBNETS"
+          } >> "$GITHUB_OUTPUT"
+
+      # Build MIGRATION_DATABASE_URL on the runner from the AWS-managed
+      # RDS master-user secret, same pattern as deploy-staging.yml. The
+      # URL is passed to the migrate container as a per-run env override;
+      # it never lands in a log (masked) or in Terraform state. All AWS
+      # calls here target the workload region (eu-central-1), not the
+      # state region.
+      - name: Resolve DB connection string from AWS
+        id: db-url
+        run: |
+          set -euo pipefail
+          DB_ID="faatora-production-pg"
+          DB_NAME="faatora"
+          REGION="${AWS_WORKLOAD_REGION}"
+          ENDPOINT=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$REGION" \
+            --query 'DBInstances[0].Endpoint.Address' \
+            --output text)
+          SECRET_ARN=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$REGION" \
+            --query 'DBInstances[0].MasterUserSecret.SecretArn' \
+            --output text)
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "$SECRET_ARN" \
+            --region "$REGION" \
+            --query SecretString \
+            --output text)
+          DB_USER=$(echo "$SECRET_JSON" | jq -r .username)
+          DB_PASS=$(echo "$SECRET_JSON" | jq -r .password)
+          DB_PASS_ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
+          URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}?uselibpqcompat=true&sslmode=require"
+          echo "::add-mask::${DB_PASS}"
+          echo "::add-mask::${DB_PASS_ENC}"
+          echo "::add-mask::${URL}"
+          mkdir -p "$RUNNER_TEMP/db"
+          printf '%s' "$URL" > "$RUNNER_TEMP/db/url"
+          chmod 600 "$RUNNER_TEMP/db/url"
+
+      - name: Run migrate task
+        id: run-task
+        env:
+          CLUSTER: ${{ steps.tf.outputs.cluster }}
+          TASK_DEF: ${{ steps.tf.outputs.task_def }}
+          CONTAINER: ${{ steps.tf.outputs.container }}
+          APP_SG: ${{ steps.tf.outputs.app_sg }}
+          SUBNETS: ${{ steps.tf.outputs.subnets }}
+        run: |
+          set -euo pipefail
+          URL="$(cat "$RUNNER_TEMP/db/url")"
+          echo "::add-mask::${URL}"
+          OVERRIDES=$(jq -nc \
+            --arg name "$CONTAINER" \
+            --arg url  "$URL" \
+            '{containerOverrides:[{name:$name, environment:[{name:"MIGRATION_DATABASE_URL", value:$url}]}]}')
+          SUBNETS_JSON=$(python3 -c "import json,sys;print(json.dumps(sys.argv[1].split(',')))" "$SUBNETS")
+          NETCFG=$(jq -nc \
+            --argjson subnets "$SUBNETS_JSON" \
+            --arg sg "$APP_SG" \
+            '{awsvpcConfiguration:{subnets:$subnets, securityGroups:[$sg], assignPublicIp:"DISABLED"}}')
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEF" \
+            --launch-type FARGATE \
+            --network-configuration "$NETCFG" \
+            --overrides "$OVERRIDES" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --started-by "gha-${GITHUB_RUN_ID}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+          if [[ -z "$TASK_ARN" || "$TASK_ARN" == "None" ]]; then
+            echo "run-task did not return a task ARN" >&2
+            exit 1
+          fi
+          echo "task_arn=$TASK_ARN" >> "$GITHUB_OUTPUT"
+          echo "Launched migrate task: $TASK_ARN"
+
+      - name: Wait for migrate task to stop
+        env:
+          CLUSTER: ${{ steps.tf.outputs.cluster }}
+          TASK_ARN: ${{ steps.run-task.outputs.task_arn }}
+        run: |
+          set -euo pipefail
+          aws ecs wait tasks-stopped \
+            --cluster "$CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --region "$AWS_WORKLOAD_REGION"
+
+      - name: Check exit code and dump logs on failure
+        env:
+          CLUSTER: ${{ steps.tf.outputs.cluster }}
+          CONTAINER: ${{ steps.tf.outputs.container }}
+          LOG_GROUP: ${{ steps.tf.outputs.log_group }}
+          TASK_ARN: ${{ steps.run-task.outputs.task_arn }}
+        run: |
+          set -euo pipefail
+          DESCRIBE=$(aws ecs describe-tasks \
+            --cluster "$CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --region "$AWS_WORKLOAD_REGION")
+          EXIT_CODE=$(echo "$DESCRIBE" \
+            | jq -r --arg name "$CONTAINER" \
+              '.tasks[0].containers[] | select(.name==$name) | .exitCode // empty')
+          STOP_REASON=$(echo "$DESCRIBE" | jq -r '.tasks[0].stoppedReason // "unknown"')
+          echo "Migrate task stopped. stoppedReason=$STOP_REASON exitCode=${EXIT_CODE:-<missing>}"
+          TASK_ID="${TASK_ARN##*/}"
+          STREAM="ecs/${CONTAINER}/${TASK_ID}"
+          if [[ "${EXIT_CODE:-1}" != "0" ]]; then
+            echo "::group::migrate task CloudWatch logs ($LOG_GROUP:$STREAM)"
+            aws logs get-log-events \
+              --log-group-name "$LOG_GROUP" \
+              --log-stream-name "$STREAM" \
+              --region "$AWS_WORKLOAD_REGION" \
+              --no-start-from-head \
+              --query 'events[*].message' \
+              --output text \
+              || echo "(could not fetch logs; the task may have failed before writing any)"
+            echo "::endgroup::"
+            echo "Migrate task failed (exitCode=${EXIT_CODE:-<missing>})." >&2
+            exit 1
+          fi
+          echo "Migrations applied successfully."
+
+  deploy-image:
+    name: Build, push and redeploy API container
+    needs: migrate
+    if: ${{ always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          # ECR / ECS live in the workload region for production, so
+          # unlike staging the credentials region here matches the push
+          # target.
+          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+
+      - name: Ensure ECR repository exists
+        run: |
+          set -euo pipefail
+          aws ecr describe-repositories \
+            --repository-names "${ECR_REPOSITORY}" \
+            --region "${AWS_WORKLOAD_REGION}" >/dev/null 2>&1 || \
+          aws ecr create-repository \
+            --repository-name "${ECR_REPOSITORY}" \
+            --region "${AWS_WORKLOAD_REGION}" \
+            --image-scanning-configuration scanOnPush=true \
+            --image-tag-mutability MUTABLE
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API image
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -f docker/api.Dockerfile \
+            -t "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG" \
+            -t "$REGISTRY/${ECR_REPOSITORY}:production" \
+            .
+          docker push "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG"
+          docker push "$REGISTRY/${ECR_REPOSITORY}:production"
+
+      - name: Force new ECS deployment
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_WORKLOAD_REGION"
+
+      - name: Wait for service stable
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_WORKLOAD_REGION"
+
+  smoke-test:
+    name: Smoke test API over the ALB
+    needs: deploy-image
+    # Optional: the ALB only has a public DNS name until the
+    # api.faatora.om DNS record and the ACM cert are in place
+    # (MIGRATION-TO-EU-CENTRAL-1.md Steps 2 and 3). This job can be
+    # skipped on early runs via workflow_dispatch input without failing
+    # the pipeline.
+    if: ${{ github.event.inputs.skip_smoke_test != 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_WORKLOAD_REGION }}
+
+      - name: Resolve ALB DNS name
+        id: alb
+        run: |
+          set -euo pipefail
+          ALB_NAME="faatora-production-alb"
+          DNS=$(aws elbv2 describe-load-balancers \
+            --names "$ALB_NAME" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --query 'LoadBalancers[0].DNSName' \
+            --output text)
+          if [ -z "$DNS" ] || [ "$DNS" = "None" ]; then
+            echo "Could not resolve DNS name for ALB $ALB_NAME" >&2
+            exit 1
+          fi
+          echo "dns=$DNS" >> "$GITHUB_OUTPUT"
+          echo "Resolved ALB DNS: $DNS"
+
+      - name: Poll health endpoint
+        env:
+          ALB_DNS: ${{ steps.alb.outputs.dns }}
+        run: |
+          set -u
+          URL="http://${ALB_DNS}/api/health"
+          echo "Polling $URL"
+          ATTEMPTS=30
+          SLEEP=10
+          BODY_FILE="$(mktemp)"
+          for i in $(seq 1 "$ATTEMPTS"); do
+            CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+              --max-time 10 \
+              --connect-timeout 5 \
+              "$URL" || echo "000")
+            if [ "$CODE" -ge 200 ] && [ "$CODE" -lt 300 ]; then
+              echo "Attempt $i: HTTP $CODE OK"
+              cat "$BODY_FILE"
+              exit 0
+            fi
+            echo "Attempt $i/$ATTEMPTS: HTTP $CODE (retrying in ${SLEEP}s)"
+            sleep "$SLEEP"
+          done
+          echo "Smoke test failed after $ATTEMPTS attempts. Last response body:" >&2
+          cat "$BODY_FILE" >&2 || true
+          exit 1
