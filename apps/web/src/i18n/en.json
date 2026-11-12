@@ -425,6 +425,49 @@
       "action.revoking": "Revoking…"
     }
   },
+  "taxDocuments": {
+    "credit": {
+      "title": "Create credit note",
+      "cta": "Create credit note",
+      "submit": "Issue credit note"
+    },
+    "debit": {
+      "title": "Create debit note",
+      "cta": "Create debit note",
+      "submit": "Issue debit note"
+    },
+    "form": {
+      "againstInvoice": "Against invoice {{number}}",
+      "number": "Document number",
+      "issueDate": "Issue date",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. Returned goods, pricing correction",
+      "linesSection": "Lines to credit or debit",
+      "linesTitle": "Lines to include",
+      "lineAria": "Include line: {{description}}",
+      "totalsAria": "Document totals",
+      "col": {
+        "pick": "Pick",
+        "description": "Description",
+        "qty": "Qty",
+        "unitPrice": "Unit price",
+        "lineNet": "Line net"
+      },
+      "subtotal": "Subtotal",
+      "vat": "VAT",
+      "grandTotal": "Total",
+      "cancel": "Cancel",
+      "submitting": "Submitting…",
+      "errors": {
+        "noLines": "Pick at least one line with a positive quantity."
+      },
+      "notCleared": {
+        "title": "This invoice cannot be adjusted yet",
+        "body": "Only cleared invoices can be credited or debited (current status: {{status}}).",
+        "hint": "Available once the invoice is cleared"
+      }
+    }
+  },
   "ops": {
     "title": "Batch operations",
     "subtitle": "Run checks and exports across all of your clients.",

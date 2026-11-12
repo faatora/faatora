@@ -11,6 +11,9 @@ export * from './pint-om/types.js';
 export * from './pint-om/specialize.js';
 export * from './ubl/serializer.js';
 export * from './ubl/parser.js';
+export * from './ubl/credit-note.js';
+export * from './ubl/credit-note-parser.js';
+export * from './ubl/debit-note.js';
 
 export const COMPLIANCE_CORE_VERSION = '0.1.0-ep4';
 
