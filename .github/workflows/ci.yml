@@ -15,7 +15,14 @@ concurrency:
 jobs:
   build:
     name: Lint, typecheck, test
-    runs-on: ubuntu-latest
+    # Pinned to 24.04 because ubuntu-latest has rolled to 26.04, which
+    # Playwright 1.56.0 does not yet support -- `playwright install
+    # chromium --with-deps` fails with "Playwright does not support
+    # chromium on ubuntu26.04-x64". 24.04 is a maintained LTS and the
+    # most recent runner image that Playwright 1.56 officially
+    # supports. Unpin once Playwright publishes a 26.04-compatible
+    # release.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
