@@ -39,8 +39,11 @@ export class CanaryService {
     @Inject(ALERT_SINK) private readonly alerts: AlertSink,
   ) {}
 
-  // Six-field cron: seconds field = every 60s. Equivalent to '0 * * * * *'.
-  @Cron('*/60 * * * * *')
+  // Six-field cron: fires at second 0 of every minute. Previously
+  // written as '*/60 * * * * *', which is equivalent in cron@3.x but
+  // out-of-range per the standard spec (seconds field is 0..59, so
+  // */60 is a latent footgun on any parser that enforces the range).
+  @Cron('0 * * * * *')
   async tick(): Promise<void> {
     await this.runOnce();
   }
