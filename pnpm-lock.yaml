@@ -59,6 +59,12 @@ importers:
       aws-jwt-verify:
         specifier: ^5.0.0
         version: 5.2.1
+      boxen:
+        specifier: 5.1.2
+        version: 5.1.2
+      check-disk-space:
+        specifier: 3.4.0
+        version: 3.4.0
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
