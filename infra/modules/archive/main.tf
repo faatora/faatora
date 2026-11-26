@@ -165,6 +165,24 @@ resource "aws_s3_bucket_lifecycle_configuration" "archive" {
 # The admin override exists for the one legitimate "GDPR erasure after a
 # firm closes" scenario documented in docs/runbooks/archive-mfa-delete.md,
 # and is intended to be empty in production environments by default.
+#
+# When no admin override is configured, we fall back to the account root
+# ARN. An earlier version used arn:aws:iam::000000000000:root as a
+# placeholder, which S3 rejects at PutBucketPolicy time with
+# "MalformedPolicy: Invalid principal in policy" — the all-zero account
+# id doesn't exist. Routing through the current account root keeps the
+# policy valid; it also makes the override list effectively "no one
+# outside this account can delete", which is a sensible default anyway.
+data "aws_caller_identity" "current" {}
+
+locals {
+  # Fallback principal set when the caller provided none. The caller's
+  # own account root is a valid ARN that S3 accepts and an intuitive
+  # default for the admin-override list.
+  _default_admin_principals = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+  _admin_principals         = length(var.admin_override_principals) > 0 ? var.admin_override_principals : local._default_admin_principals
+}
+
 data "aws_iam_policy_document" "archive_retention" {
   # Block object + version deletes for anyone not on the admin override.
   # NotPrincipal only works in Deny statements, which is exactly what we
@@ -175,7 +193,7 @@ data "aws_iam_policy_document" "archive_retention" {
 
     not_principals {
       type        = "AWS"
-      identifiers = length(var.admin_override_principals) > 0 ? var.admin_override_principals : ["arn:aws:iam::000000000000:root"]
+      identifiers = local._admin_principals
     }
 
     actions = [
@@ -213,7 +231,7 @@ data "aws_iam_policy_document" "archive_retention" {
     condition {
       test     = "StringNotEquals"
       variable = "aws:PrincipalArn"
-      values   = length(var.admin_override_principals) > 0 ? var.admin_override_principals : ["arn:aws:iam::000000000000:root"]
+      values   = local._admin_principals
     }
   }
 }
