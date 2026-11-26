@@ -11,13 +11,61 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
 import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
+
+// --- Boot observability -----------------------------------------------------
+//
+// These primitives run BEFORE Nest's DI container is built, so they cannot
+// use the pino logger. They write plain lines to stderr, which Fargate
+// forwards verbatim to the CloudWatch log group bound to the task.
+//
+// WHY: on 2026-11-24 we spent a full day chasing a silent prod crash where
+// the container exited with no diagnostic because `bufferLogs: true` (set
+// below) held every log line in memory until `app.useLogger()` was called,
+// but NestFactory.create() threw first (a dynamic `await import('cron')`
+// from @nestjs/schedule hit a missing transitive dep — see PR #15). The
+// buffer was discarded at process exit; CloudWatch saw nothing but the
+// container-stop event. These stderr markers guarantee that even if
+// create() hangs or throws before the pino logger is attached, we still
+// have a timeline in the task log.
+//
+// Keep these lightweight: no JSON serialisation, no imports — a failure
+// in a dependency here would defeat the point.
+process.stderr.write(`[boot] main.ts loaded pid=${process.pid} node=${process.version}\n`);
+process.stderr.write(`[boot] sentry ${sentryEnabled ? 'enabled' : 'disabled (no SENTRY_DSN)'}\n`);
+
+// Top-level process-exit marker. Nest's shutdown hooks run before this and
+// usually log through pino; this fires LAST and catches silent exits
+// (unhandled rejection, OOM kill, `process.exit(1)` from a dep, etc.).
+// Any code >0 that lands here without a preceding error log in CloudWatch
+// is a boot-time failure the operator should treat as pageable.
+process.on('exit', (code) => {
+  process.stderr.write(`[boot] process exiting code=${code}\n`);
+});
+
 async function bootstrap() {
   const env = loadEnv();
+  process.stderr.write(`[boot] env loaded NODE_ENV=${env.NODE_ENV} PORT=${env.PORT}\n`);
+  // bufferLogs: FALSE (was true before the 2026-11-24 outage).
+  //
+  // `bufferLogs: true` tells Nest to collect every log line emitted during
+  // module construction into an in-memory buffer and replay it through the
+  // logger installed via `app.useLogger()`. If NestFactory.create() throws
+  // BEFORE useLogger runs (which is what happened when @nestjs/schedule
+  // tried to `await import('cron')` against a stripped node_modules), the
+  // buffer is dropped on the floor and the operator sees nothing in
+  // CloudWatch beyond the ECS task-stop reason. We trade slightly uglier
+  // boot output (default Nest console logger prints the first few lines
+  // before pino takes over) for a guaranteed log trail on failure. This is
+  // the correct trade-off for a regulated e-invoicing service — observability
+  // of prod incidents beats log aesthetics every time.
+  //
   // rawBody: required so the billing webhook controller can verify
   // Stripe signatures against the unparsed body. The flag only exposes
   // `req.rawBody` to controllers that opt in via @Req()/RawBodyRequest;
   // other controllers keep the parsed body as before.
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
+  process.stderr.write('[boot] calling NestFactory.create()\n');
+  const app = await NestFactory.create(AppModule, { bufferLogs: false, rawBody: true });
+  process.stderr.write('[boot] NestFactory.create() returned, wiring middleware\n');
   app.useLogger(app.get(Logger));
   app.use(helmet());
   app.enableShutdownHooks();
@@ -66,5 +114,16 @@ async function bootstrap() {
   }
 
   await app.listen(env.PORT);
+  process.stderr.write(`[boot] app.listen bound to :${env.PORT} — ready\n`);
 }
-void bootstrap();
+
+// Catch bootstrap rejections and surface them on stderr BEFORE Node's
+// default unhandled-rejection handler runs. Without this the stack trace
+// still reaches CloudWatch (Node prints it on exit) but is interleaved
+// with the "[boot] process exiting" line from the exit handler above —
+// explicit is better.
+bootstrap().catch((err: unknown) => {
+  const msg = err instanceof Error ? (err.stack ?? err.message) : String(err);
+  process.stderr.write(`[boot] bootstrap() rejected: ${msg}\n`);
+  process.exitCode = 1;
+});

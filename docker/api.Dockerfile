@@ -30,6 +30,28 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @faatora/compliance build
 RUN pnpm --filter @faatora/api build
 # Produce a deploy bundle at /deploy with flat node_modules.
+#
+# TRAP — pnpm deploy --prod only installs what apps/api/package.json
+# declares (plus its transitive closure). Any dep that a runtime-required
+# package resolves with `await import()`, `require()` or
+# `createRequire().resolve()` but is NOT listed as its OWN direct
+# dependency — e.g. an optional peer, or a dep the upstream author
+# forgot to declare — is silently stripped from /deploy and only crashes
+# at first use in prod. We hit this with `cron` (transitive of
+# @nestjs/schedule, see PR #15) and spent a day chasing the ensuing
+# silent boot failure.
+#
+# Mitigations now in place:
+#   1. apps/api/package.json pins every such dep explicitly (cron,
+#      boxen and check-disk-space for terminus, etc.) so pnpm deploy
+#      is forced to include them.
+#   2. main.ts writes stderr boot markers so a missing-dep throw in
+#      NestFactory.create() still leaves a trail in CloudWatch.
+#
+# DO NOT replace --prod with --prod=false as a workaround: the deploy
+# image would carry the full dev toolchain (tsc, jest, ~800 MB) into
+# production and would be an audit red flag for the OTA readiness pack.
+# The right fix remains pinning the offending transitive in package.json.
 RUN pnpm deploy --filter @faatora/api --prod /deploy
 
 FROM node:22-slim AS runtime
