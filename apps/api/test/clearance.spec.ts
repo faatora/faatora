@@ -119,6 +119,8 @@ describe('ClearanceGatewayService', () => {
     provider?: TransmissionProvider,
     opts: { archive?: ArchiveService | null } = {},
   ): ClearanceGatewayService {
+    // Tests construct the stub without a Nest injector (moduleRef=null);
+    // async-mode tests below call attachSinkForTesting() to inject a sink.
     const stub = new StubAspProvider(null);
     const gw = new ClearanceGatewayService(
       db,
@@ -444,7 +446,11 @@ describe('ClearanceGatewayService', () => {
     // CLEARED for this specific assertion (an archive step would push it
     // onwards to ARCHIVED).
     const gw = makeGateway(undefined, { archive: null });
-    const asyncStub = new StubAspProvider({
+    // StubAspProvider now resolves the sink lazily via ModuleRef (break
+    // the ClearanceModule DI cycle). Tests without a Nest injector pass
+    // moduleRef=null and install the sink via attachSinkForTesting.
+    const asyncStub = new StubAspProvider(null);
+    asyncStub.attachSinkForTesting({
       handleCallback: (tid, cb) => gw.handleCallback(tid, cb),
     });
     (gw as unknown as { provider: TransmissionProvider }).provider = asyncStub;
@@ -473,7 +479,8 @@ describe('ClearanceGatewayService', () => {
     // ARCHIVED — this test's assertion is specifically about handleCallback
     // idempotency on a terminal clearance state.
     const gw = makeGateway(undefined, { archive: null });
-    const asyncStub = new StubAspProvider({
+    const asyncStub = new StubAspProvider(null);
+    asyncStub.attachSinkForTesting({
       handleCallback: (tid, cb) => gw.handleCallback(tid, cb),
     });
     (gw as unknown as { provider: TransmissionProvider }).provider = asyncStub;

@@ -1,4 +1,5 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { randomUUID } from 'node:crypto';
 import type {
   TransmissionCallback,
@@ -11,6 +12,19 @@ import type {
  * Sink to push asynchronous OTA verdicts back into the gateway. In Wave 3
  * this is the gateway's own handleCallback method; in a real deployment it
  * would be an HTTP webhook controller that forwards into the same method.
+ *
+ * WIRING NOTE. We resolve this sink LAZILY via ModuleRef (see
+ * StubAspProvider.submit) rather than taking it in the constructor.
+ * Reason: the module wires the token as `useExisting: ClearanceGatewayService`
+ * and the gateway in turn depends on `TRANSMISSION_PROVIDER` (which
+ * resolves back to this StubAspProvider). Constructor injection here
+ * creates a classic circular that Nest 10's `useExisting` resolver
+ * cannot break even with `@Optional()` — the provider's Promise stays
+ * pending, no "dependencies initialized" line fires for ClearanceModule,
+ * and the whole NestFactory.create() call hangs (observed in staging
+ * 2026-11-26 — one full day on CloudWatch silent-exits). Lazy resolve
+ * sidesteps the cycle: by the time submit() runs, both instances exist
+ * and Nest can serve the alias in one microtask.
  */
 export const ASP_CALLBACK_SINK = 'ASP_CALLBACK_SINK';
 export interface ClearanceCallbackSink {
@@ -38,9 +52,43 @@ const ASYNC_CALLBACK_DELAY_MS = 50;
 
 @Injectable()
 export class StubAspProvider implements TransmissionProvider {
-  constructor(
-    @Optional() @Inject(ASP_CALLBACK_SINK) private readonly sink: ClearanceCallbackSink | null,
-  ) {}
+  private readonly log = new Logger(StubAspProvider.name);
+  // Test-only override, written through attachSinkForTesting. Set this in
+  // suites that need to observe the async callback without a full Nest
+  // application context. Prod code paths MUST NOT read this directly.
+  private sinkOverride: ClearanceCallbackSink | null = null;
+
+  // `moduleRef` is nullable so unit tests can construct StubAspProvider
+  // without spinning up a Nest injector. Prod callers always get a real
+  // ModuleRef through DI (ClearanceModule).
+  constructor(private readonly moduleRef: ModuleRef | null) {}
+
+  /**
+   * Install a callback sink directly, bypassing ModuleRef. Intended ONLY
+   * for unit tests that construct StubAspProvider without a Nest injector
+   * — see apps/api/test/clearance.spec.ts. In production the sink is
+   * resolved lazily through ModuleRef at submit() time.
+   */
+  attachSinkForTesting(sink: ClearanceCallbackSink | null): void {
+    this.sinkOverride = sink;
+  }
+
+  /**
+   * Lazy-resolve the callback sink the first time it's needed. See the
+   * wiring note on ASP_CALLBACK_SINK above for why this cannot be a
+   * constructor injection. `strict: false` lets ModuleRef look up tokens
+   * registered anywhere in the application tree, not just this module.
+   */
+  private resolveSink(): ClearanceCallbackSink | null {
+    if (this.sinkOverride) return this.sinkOverride;
+    if (!this.moduleRef) return null;
+    try {
+      return this.moduleRef.get<ClearanceCallbackSink>(ASP_CALLBACK_SINK, { strict: false });
+    } catch (err) {
+      this.log.warn(`ASP_CALLBACK_SINK not resolvable at submit() time: ${(err as Error).message}`);
+      return null;
+    }
+  }
 
   async submit(input: TransmissionSubmission): Promise<TransmissionResult> {
     // Idempotency: identical key -> identical result, regardless of payload.
@@ -70,8 +118,8 @@ export class StubAspProvider implements TransmissionProvider {
         synchronousStatus: 'accepted_pending',
       };
       idempotencyCache.set(input.idempotencyKey, result);
-      if (this.sink) {
-        const sink = this.sink;
+      const sink = this.resolveSink();
+      if (sink) {
         // The stub knows the tenant from the submission context; it passes
         // it along so handleCallback runs under RLS for the right tenant.
         const tenantId = input.tenantId;
