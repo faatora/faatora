@@ -175,9 +175,60 @@ export const PEPPOL = {
   /** ebMS roles. */
   initiatorRole: 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/initiator',
   responderRole: 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/responder',
+  /**
+   * The Peppol AS4 transport profile identifier, used in SMP endpoint
+   * records (`smp:Endpoint/@transportProfile`). Peppol TIA v2.0.
+   */
+  as4TransportProfile: 'peppol-transport-as4-v2_0',
   /** Part property keys Peppol TIA requires on the payload PartInfo. */
   partProps: {
     mimeType: 'MimeType',
     compressionType: 'CompressionType',
   },
+  /**
+   * ebMS message-properties keys Peppol TIA mandates on every
+   * UserMessage (originalSender = C1, finalRecipient = C4).
+   */
+  messagePropertyKeys: {
+    originalSender: 'originalSender',
+    finalRecipient: 'finalRecipient',
+  },
+} as const;
+
+/* -------------------------------------------------------------------------- */
+/* On-the-wire XML namespaces.                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * XML namespace URIs the AS4 / ebMS / SOAP / XMLDsig serializers use.
+ *
+ * Collected here (not sprinkled through the builders) so the whole
+ * transport layer resolves namespaces against a single auditable
+ * source of truth. Every one of these strings is normative — a stray
+ * character will make XMLDsig canonicalisation diverge and the
+ * receiver's signature verification fail.
+ *
+ * References:
+ *   - SOAP 1.2 (W3C Recommendation, April 2007)
+ *   - OASIS ebMS 3.0 Part 1 Core Specification, §5.2
+ *   - W3C XML-Signature Syntax and Processing (Second Edition), §4
+ *   - ETSI EN 319 132-1 (XAdES), §4
+ */
+export const XML_NS = {
+  /** SOAP 1.2 envelope namespace — Peppol AS4 is bound to SOAP 1.2. */
+  soap: 'http://www.w3.org/2003/05/soap-envelope',
+  /** OASIS ebMS 3.0 Core Messaging header namespace. */
+  ebms: 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/',
+  /** W3C XML Digital Signature (ds:) namespace. */
+  ds: 'http://www.w3.org/2000/09/xmldsig#',
+  /** ETSI XAdES 1.3.2 (xades:) namespace. */
+  xades: 'http://uri.etsi.org/01903/v1.3.2#',
+  /** W3C WS-Addressing namespace, used in AS4 message exchange. */
+  wsa: 'http://www.w3.org/2005/08/addressing',
+  /** OASIS WS-Security 1.1 utility namespace (wsu:Id attributes). */
+  wsu: 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd',
+  /** OASIS busdox SMP ServiceMetadata publishing namespace. */
+  smp: 'http://busdox.org/serviceMetadata/publishing/1.0/',
+  /** OASIS busdox identifiers namespace used inside ServiceMetadata docs. */
+  smpIds: 'http://busdox.org/transport/identifiers/1.0/',
 } as const;
