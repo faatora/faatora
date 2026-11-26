@@ -85,9 +85,7 @@ export class StubAspProvider implements TransmissionProvider {
     try {
       return this.moduleRef.get<ClearanceCallbackSink>(ASP_CALLBACK_SINK, { strict: false });
     } catch (err) {
-      this.log.warn(
-        `ASP_CALLBACK_SINK not resolvable at submit() time: ${(err as Error).message}`,
-      );
+      this.log.warn(`ASP_CALLBACK_SINK not resolvable at submit() time: ${(err as Error).message}`);
       return null;
     }
   }
