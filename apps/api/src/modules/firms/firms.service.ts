@@ -14,7 +14,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { Pool } from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { DB, type Database } from '../../db/db.module';
+import { DB, pgSslFor, type Database } from '../../db/db.module';
 import { withFirm } from '../../db/with-firm';
 import {
   firmClientTenants,
@@ -159,7 +159,10 @@ export class FirmsService implements OnModuleDestroy {
     const env = loadEnv();
     const url = env.MIGRATION_DATABASE_URL ?? env.DATABASE_URL;
     if (!url) return null;
-    this.bypassPool = new Pool({ connectionString: url, max: 2 });
+    // SSL must be set per-config: `pg` doesn't parse ?sslmode=require from
+    // the URL and RDS enforces encryption via pg_hba.conf. See db.module's
+    // pgSslFor for the full story and the 2026-11-26 outage context.
+    this.bypassPool = new Pool({ connectionString: url, max: 2, ssl: pgSslFor(env.NODE_ENV) });
     this.bypassDb = drizzle(this.bypassPool, { schema });
     return this.bypassDb;
   }

@@ -9,7 +9,7 @@ import {
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { Pool } from 'pg';
-import { DB, type Database } from '../../db/db.module';
+import { DB, pgSslFor, type Database } from '../../db/db.module';
 import { withTenant } from '../../db/with-tenant';
 import { loadEnv } from '../../config/env';
 import { invoices } from '../../db/schema/invoicing';
@@ -647,7 +647,12 @@ export class ClearanceGatewayService implements ClearanceCallbackSink {
     const env = loadEnv();
     const url = env.MIGRATION_DATABASE_URL ?? env.DATABASE_URL;
     if (!url) return null;
-    this.sweepPool = new Pool({ connectionString: url, max: 2 });
+    // SSL must be set per-config: `pg` doesn't parse ?sslmode=require from
+    // the URL, and RDS enforces encryption via pg_hba.conf. Without this,
+    // the main app /api/health passed (its pool goes through DbModule)
+    // but every drain tick logged "ClearanceScheduler drain crashed:
+    // no pg_hba.conf entry for host ..., no encryption" (2026-11-26).
+    this.sweepPool = new Pool({ connectionString: url, max: 2, ssl: pgSslFor(env.NODE_ENV) });
     return this.sweepPool;
   }
 
