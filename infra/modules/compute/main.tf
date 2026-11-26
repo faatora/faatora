@@ -30,7 +30,7 @@ resource "aws_lb_target_group" "app" {
   vpc_id      = var.vpc_id
 
   health_check {
-    path                = "/health"
+    path                = "/api/health"
     protocol            = "HTTP"
     matcher             = "200-399"
     interval            = 30
