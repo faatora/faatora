@@ -47,10 +47,7 @@ class DatabaseHealthIndicator extends HealthIndicator {
       return this.getStatus(key, true);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      throw new HealthCheckError(
-        'Database ping failed',
-        this.getStatus(key, false, { message }),
-      );
+      throw new HealthCheckError('Database ping failed', this.getStatus(key, false, { message }));
     }
   }
 }
