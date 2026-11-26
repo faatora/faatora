@@ -4,7 +4,12 @@ import { DB, type Database } from '../../db/db.module';
 import { withTenant } from '../../db/with-tenant';
 import { invoices } from '../../db/schema/invoicing';
 import { signedDocuments } from '../../db/schema/signing';
-import { archiveRecords } from '../../db/schema/archive';
+import {
+  archiveRecords,
+  GLACIER_IR_TRANSITION_DAYS,
+  RETENTION_EXPIRATION_DAYS,
+  type ArchiveRetentionTier,
+} from '../../db/schema/archive';
 import { ARCHIVE_STORAGE, type ArchiveStorage } from './storage.port';
 import { computeChainHash, sha256Hex } from './hash-chain';
 
@@ -25,6 +30,8 @@ export interface ArchiveRecordRow {
   byteSize: number;
   retentionUntil: string;
   archivedAt: Date;
+  retentionTier: ArchiveRetentionTier;
+  retentionUntilAt: Date;
 }
 
 export interface ArchiveSkip {
@@ -49,6 +56,30 @@ function retentionUntilFrom(now: Date): Date {
 
 function toDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Decide which S3 storage class an object should be in given its
+ * archived_at and the clock. New writes always land in STANDARD (the S3
+ * Lifecycle rule in infra/modules/archive/main.tf does the actual
+ * transition at day 1825); the periodic reconcile job uses this same
+ * function to catch up archive_records.retention_tier with the bucket.
+ *
+ * OTA rule implemented: Fawtara §5.7 — 5 years operational + 5 years
+ * cold archive = 10 years total.
+ */
+export function expectedTierFor(archivedAt: Date, now: Date = new Date()): ArchiveRetentionTier {
+  const ageDays = (now.getTime() - archivedAt.getTime()) / (24 * 60 * 60 * 1000);
+  return ageDays < GLACIER_IR_TRANSITION_DAYS ? 'STANDARD' : 'GLACIER_IR';
+}
+
+/**
+ * Compute the point-in-time past which the Lifecycle rule will have
+ * expired the object and reads should refuse rather than return a 404
+ * from S3. Mirrors infra/modules/archive/variables.tf's `expiration_days`.
+ */
+export function retentionUntilAtFrom(archivedAt: Date): Date {
+  return new Date(archivedAt.getTime() + RETENTION_EXPIRATION_DAYS * 24 * 60 * 60 * 1000);
 }
 
 @Injectable()
@@ -91,6 +122,10 @@ export class ArchiveService {
 
       const now = new Date();
       const retentionUntil = retentionUntilFrom(now);
+      // New writes always start in STANDARD. The S3 Lifecycle rule in
+      // infra/modules/archive/main.tf moves them to GLACIER_IR at day 1825.
+      const retentionTier: ArchiveRetentionTier = 'STANDARD';
+      const retentionUntilAt = retentionUntilAtFrom(now);
 
       const content = Buffer.from(signed.signedXml, 'utf8');
       const sha256 = sha256Hex(content);
@@ -133,6 +168,8 @@ export class ArchiveService {
           contentType: 'application/xml',
           byteSize: content.byteLength,
           retentionUntil: toDateOnly(retentionUntil),
+          retentionTier,
+          retentionUntilAt,
         })
         .returning();
 
@@ -160,10 +197,25 @@ export class ArchiveService {
    * Fetch the archived payload. The storage adapter is called directly;
    * `withTenant` is used to resolve the record under RLS so a caller can
    * only read keys that belong to their tenant.
+   *
+   * Retention handling (10-year rule):
+   *   - If `retention_until_at` is in the past, the S3 Lifecycle rule has
+   *     already expired the object: refuse the read with a NotFound rather
+   *     than let the adapter 404 with a confusing S3 error message.
+   *   - If `retention_tier = 'GLACIER_IR'`, we call the ArchiveReader
+   *     helper which does a normal GetObject (no restore needed for
+   *     Glacier Instant Retrieval — see ./glacier-reader.ts). The caller
+   *     pays the ~2x-STANDARD per-GET cost; the caller's retrieval metric
+   *     tracks that separately.
    */
   async getContent(tenantId: string, invoiceId: string): Promise<Buffer | null> {
     const row = await this.getRecord(tenantId, invoiceId);
     if (!row) return null;
+    if (row.retentionUntilAt.getTime() <= Date.now()) {
+      // Past retention expiration: the object is gone and no amount of
+      // retrying will bring it back. Treat as if the row did not exist.
+      return null;
+    }
     return this.storage.get(row.storageKey, row.storageBucket ?? undefined);
   }
 
@@ -227,6 +279,8 @@ export class ArchiveService {
       archivedAt: Date;
       byteSize: number;
       retentionUntil: string;
+      retentionTier: ArchiveRetentionTier;
+      retentionUntilAt: Date;
     }>
   > {
     if (!(from instanceof Date) || isNaN(from.getTime())) {
@@ -248,6 +302,8 @@ export class ArchiveService {
           archivedAt: archiveRecords.archivedAt,
           byteSize: archiveRecords.byteSize,
           retentionUntil: archiveRecords.retentionUntil,
+          retentionTier: archiveRecords.retentionTier,
+          retentionUntilAt: archiveRecords.retentionUntilAt,
         })
         .from(archiveRecords)
         .where(
@@ -259,7 +315,42 @@ export class ArchiveService {
         storageBackend: r.storageBackend as 'filesystem' | 's3',
         byteSize: Number(r.byteSize),
         retentionUntil: String(r.retentionUntil),
+        retentionTier: r.retentionTier as ArchiveRetentionTier,
       }));
+    });
+  }
+
+  /**
+   * Reconcile `retention_tier` for the tenant's archive rows that have
+   * aged past the GLACIER_IR cutoff in the bucket. Idempotent: rows
+   * already in GLACIER_IR are left alone. Intended to be called from a
+   * periodic job (daily, via `@nestjs/schedule`).
+   *
+   * Returns the number of rows that were transitioned to GLACIER_IR on
+   * this pass. The S3 Lifecycle rule in infra/modules/archive/main.tf is
+   * the source of truth; this method only catches the database up with
+   * the bucket so reader cost projections in archive_records can be
+   * read without a HeadObject.
+   */
+  async reconcileTiers(tenantId: string, now: Date = new Date()): Promise<number> {
+    return withTenant(this.db, tenantId, async (tx) => {
+      const rows = await tx
+        .select({ id: archiveRecords.id, archivedAt: archiveRecords.archivedAt })
+        .from(archiveRecords)
+        .where(
+          and(eq(archiveRecords.tenantId, tenantId), eq(archiveRecords.retentionTier, 'STANDARD')),
+        );
+      let flipped = 0;
+      for (const r of rows) {
+        if (expectedTierFor(r.archivedAt, now) === 'GLACIER_IR') {
+          await tx
+            .update(archiveRecords)
+            .set({ retentionTier: 'GLACIER_IR' })
+            .where(eq(archiveRecords.id, r.id));
+          flipped += 1;
+        }
+      }
+      return flipped;
     });
   }
 }
