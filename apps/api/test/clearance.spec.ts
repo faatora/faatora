@@ -13,6 +13,18 @@ import { clearanceDlq, clearanceEvents, clearanceOutbox } from '../src/db/schema
 import { ClearanceGatewayService } from '../src/modules/clearance/clearance-gateway.service';
 import { TransmissionCircuitBreaker } from '../src/modules/clearance/circuit-breaker';
 import { StubAspProvider, resetStubAspState } from '../src/modules/clearance/stub-asp';
+import type { ModuleRef } from '@nestjs/core';
+
+// Minimal ModuleRef stub for suites that construct StubAspProvider outside
+// a Nest injector. These tests either take the synchronous-clearance path
+// (never calls resolveSink) or install a direct sink via
+// attachSinkForTesting() before submit() runs, so the fake's methods are
+// never actually invoked. The cast via `as unknown` is confined to tests.
+const fakeModuleRef = {
+  get(): never {
+    throw new Error('fakeModuleRef.get() called from a test path that should not reach it');
+  },
+} as unknown as ModuleRef;
 import { ArchiveService } from '../src/modules/archive/archive.service';
 import { FilesystemStorage } from '../src/modules/archive/filesystem-storage';
 import type {
@@ -119,9 +131,9 @@ describe('ClearanceGatewayService', () => {
     provider?: TransmissionProvider,
     opts: { archive?: ArchiveService | null } = {},
   ): ClearanceGatewayService {
-    // Tests construct the stub without a Nest injector (moduleRef=null);
+    // Tests construct the stub without a Nest injector via fakeModuleRef;
     // async-mode tests below call attachSinkForTesting() to inject a sink.
-    const stub = new StubAspProvider(null);
+    const stub = new StubAspProvider(fakeModuleRef);
     const gw = new ClearanceGatewayService(
       db,
       provider ?? stub,
@@ -449,7 +461,7 @@ describe('ClearanceGatewayService', () => {
     // StubAspProvider now resolves the sink lazily via ModuleRef (break
     // the ClearanceModule DI cycle). Tests without a Nest injector pass
     // moduleRef=null and install the sink via attachSinkForTesting.
-    const asyncStub = new StubAspProvider(null);
+    const asyncStub = new StubAspProvider(fakeModuleRef);
     asyncStub.attachSinkForTesting({
       handleCallback: (tid, cb) => gw.handleCallback(tid, cb),
     });
@@ -479,7 +491,7 @@ describe('ClearanceGatewayService', () => {
     // ARCHIVED — this test's assertion is specifically about handleCallback
     // idempotency on a terminal clearance state.
     const gw = makeGateway(undefined, { archive: null });
-    const asyncStub = new StubAspProvider(null);
+    const asyncStub = new StubAspProvider(fakeModuleRef);
     asyncStub.attachSinkForTesting({
       handleCallback: (tid, cb) => gw.handleCallback(tid, cb),
     });
