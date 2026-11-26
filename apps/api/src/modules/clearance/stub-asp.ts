@@ -58,10 +58,15 @@ export class StubAspProvider implements TransmissionProvider {
   // application context. Prod code paths MUST NOT read this directly.
   private sinkOverride: ClearanceCallbackSink | null = null;
 
-  // `moduleRef` is nullable so unit tests can construct StubAspProvider
-  // without spinning up a Nest injector. Prod callers always get a real
-  // ModuleRef through DI (ClearanceModule).
-  constructor(private readonly moduleRef: ModuleRef | null) {}
+  // `moduleRef` must be a plain `ModuleRef` (no `ModuleRef | null` union):
+  // TypeScript emits `Object` as the design-type metadata for any union,
+  // and Nest's reflection-based resolver reads that metadata and errors
+  // with "Nest can't resolve dependencies of StubAspProvider (?). ...
+  // argument Object at index [0]" (observed in staging task-def :13).
+  //
+  // Tests that construct this class bypassing DI pass a stub instead of
+  // null; see `apps/api/test/clearance.spec.ts`.
+  constructor(private readonly moduleRef: ModuleRef) {}
 
   /**
    * Install a callback sink directly, bypassing ModuleRef. Intended ONLY
@@ -81,7 +86,6 @@ export class StubAspProvider implements TransmissionProvider {
    */
   private resolveSink(): ClearanceCallbackSink | null {
     if (this.sinkOverride) return this.sinkOverride;
-    if (!this.moduleRef) return null;
     try {
       return this.moduleRef.get<ClearanceCallbackSink>(ASP_CALLBACK_SINK, { strict: false });
     } catch (err) {
