@@ -91,7 +91,28 @@ describe('AuditService (EP5 W2-E)', () => {
   });
 
   afterEach(async () => {
-    // Cascade-delete firms wipes their audit rows too.
+    // The @OnEvent('firm.created') subscriber in AuditSubscribers runs its
+    // INSERT asynchronously (`{ async: true }` is the EP5 Wave 2 pattern),
+    // so by the time a test's `await` completes, the subscriber's own
+    // INSERT into firm_audit_events may still be in flight. If the
+    // afterEach DELETE on firms races with that INSERT, Postgres picks up
+    // a classic ShareLock vs ShareLock deadlock across the FK (observed
+    // deterministically on 2026-11-26 CI). Give pending subscribers a
+    // small window to settle, then retry the DELETE on deadlock.
+    await new Promise((r) => setTimeout(r, 100));
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await admin.query(`DELETE FROM firms WHERE name LIKE 'Audit Firm%'`);
+        return;
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        // 40P01 = deadlock_detected, 40001 = serialization_failure.
+        if (code !== '40P01' && code !== '40001') throw err;
+        await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+      }
+    }
+    // Final attempt (will throw if still deadlocked, which surfaces a
+    // real bug rather than a flaky teardown).
     await admin.query(`DELETE FROM firms WHERE name LIKE 'Audit Firm%'`);
   });
 

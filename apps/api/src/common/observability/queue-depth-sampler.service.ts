@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { Cron } from '@nestjs/schedule';
 import { Pool } from 'pg';
 import { loadEnv } from '../../config/env';
+import { pgSslFor } from '../../db/db.module';
 import { clearanceDlqSize, clearanceQueueDepth } from './metrics';
 
 /**
@@ -44,7 +45,10 @@ export class QueueDepthSamplerService implements OnModuleInit, OnModuleDestroy {
         'MIGRATION_DATABASE_URL is unset — falling back to DATABASE_URL. Cross-tenant counts may be filtered by RLS.',
       );
     }
-    this.pool = new Pool({ connectionString: url, max: 2 });
+    // SSL must be set per-config: `pg` doesn't parse ?sslmode=require from
+    // the URL, and RDS enforces encryption via pg_hba.conf. See db.module's
+    // pgSslFor for the full story and the 2026-11-26 outage context.
+    this.pool = new Pool({ connectionString: url, max: 2, ssl: pgSslFor(env.NODE_ENV) });
     this.pool.on('error', (err) => {
       this.log.warn({ err: err.message }, 'queue-depth pool emitted error');
     });
