@@ -128,3 +128,20 @@ output "app_security_group_id" {
   description = "Security group id attached to the app tasks (reused by the one-off migrate task)."
   value       = var.enable_infra ? module.network[0].app_sg_id : null
 }
+
+# ---- ClearTax mTLS (see modules/compute/mtls.tf) ----
+
+output "cleartax_trust_store_arn" {
+  description = "ARN of the ALB Trust Store that holds the ClearTax ops CA bundle. Null when enable_cleartax_mtls is off."
+  value       = var.enable_infra ? module.compute[0].cleartax_trust_store_arn : null
+}
+
+output "cleartax_mtls_listener_arn" {
+  description = "ARN of the mTLS listener hosting the ClearTax partner endpoint. Null when enable_cleartax_mtls is off."
+  value       = var.enable_infra ? module.compute[0].cleartax_mtls_listener_arn : null
+}
+
+output "cleartax_mtls_port" {
+  description = "Port the mTLS listener binds to. Null when enable_cleartax_mtls is off."
+  value       = var.enable_infra ? module.compute[0].cleartax_mtls_port : null
+}

@@ -78,4 +78,16 @@ module "compute" {
   # the container. Current CI flow still resolves the URL on the runner
   # and injects it as a task env override.
   rds_master_user_secret_arn = module.database[0].master_user_secret_arn
+
+  # ClearTax §5.7 partner mTLS listener + trust store (see
+  # modules/compute/mtls.tf and docs/runbooks/cleartax-partner-access.md).
+  # Staging ships with this disabled; production flips the flag on and
+  # the sensitive S3/cert/CIDR inputs come from a sealed tfvars file
+  # applied by CI rather than from the committed env tfvars.
+  enable_cleartax_mtls         = var.enable_cleartax_mtls
+  cleartax_ca_bundle_s3_bucket = var.cleartax_ca_bundle_s3_bucket
+  cleartax_ca_bundle_s3_key    = var.cleartax_ca_bundle_s3_key
+  cleartax_mtls_port           = var.cleartax_mtls_port
+  cleartax_partner_cidrs       = var.cleartax_partner_cidrs
+  alb_cert_arn                 = var.alb_cert_arn
 }

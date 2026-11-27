@@ -10,3 +10,11 @@ vpc_cidr     = "10.20.0.0/16"
 az_count     = 2
 db_multi_az  = true
 enable_infra = true
+
+# ClearTax §5.7 partner mTLS stays off in staging until the ClearTax ops
+# CA bundle has been uploaded to S3 and `cleartax_ca_bundle_s3_*`,
+# `alb_cert_arn` and `cleartax_partner_cidrs` are supplied via a sealed
+# tfvars file. Flipping this flag on with any of those unset will fail
+# `terraform plan` on purpose (see infra/modules/compute/mtls.tf
+# preconditions and docs/runbooks/cleartax-partner-access.md).
+enable_cleartax_mtls = false

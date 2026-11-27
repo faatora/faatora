@@ -72,3 +72,20 @@ output "migrate_container_name" {
   description = "Container name inside the migrate task definition. CI uses it when passing env overrides to `aws ecs run-task`."
   value       = var.container_name
 }
+
+# ---- ClearTax mTLS (see mtls.tf) ----
+
+output "cleartax_trust_store_arn" {
+  description = "ARN of the ALB Trust Store that holds the ClearTax ops CA bundle. Null when enable_cleartax_mtls=false."
+  value       = var.enable_cleartax_mtls ? aws_lb_trust_store.cleartax[0].arn : null
+}
+
+output "cleartax_mtls_listener_arn" {
+  description = "ARN of the mTLS listener hosting the ClearTax partner endpoint. Null when enable_cleartax_mtls=false."
+  value       = var.enable_cleartax_mtls ? aws_lb_listener.cleartax_mtls[0].arn : null
+}
+
+output "cleartax_mtls_port" {
+  description = "Port the mTLS listener binds to. Null when enable_cleartax_mtls=false."
+  value       = var.enable_cleartax_mtls ? var.cleartax_mtls_port : null
+}

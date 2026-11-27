@@ -23,35 +23,69 @@ Failure codes: **503** when env is not configured, **401** when the mTLS header 
 
 ## ALB listener (mutual-TLS) configuration
 
-The listener in `infra/modules/alb` (NOTE: module scaffold is the follow-up PR after this one — not yet present as of this runbook's creation) needs the `mutual_authentication` block in Terraform:
+The Terraform lives in `infra/modules/compute/mtls.tf`. It provisions three things behind the `enable_cleartax_mtls` feature flag:
 
-```hcl
-resource "aws_lb_listener" "api_443" {
-  load_balancer_arn = aws_lb.api.arn
-  port              = 443
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = aws_acm_certificate.api.arn
+1. `aws_lb_trust_store.cleartax` — syncs the ClearTax ops CA PEM bundle from `s3://<cleartax_ca_bundle_s3_bucket>/<cleartax_ca_bundle_s3_key>` into an ALB Trust Store.
+2. `aws_security_group.alb_mtls` (+ `aws_vpc_security_group_ingress_rule.alb_mtls`) — a dedicated ALB SG whose only ingress is `tcp/<cleartax_mtls_port>` from the CIDRs in `cleartax_partner_cidrs`. This SG is appended to the ALB's `security_groups` list so public 80/443 ingress on the network-module SG is untouched.
+3. `aws_lb_listener.cleartax_mtls` — an HTTPS listener on `var.cleartax_mtls_port` (default `8443`) with:
+   - `ssl_policy = "ELBSecurityPolicy-TLS13-1-2-2021-06"`
+   - `certificate_arn = var.alb_cert_arn`
+   - `mutual_authentication { mode = "verify", trust_store_arn = <trust store>, ignore_client_certificate_expiration = false }`
+   - `default_action` forwards to the same target group the public listener uses — the Nest `ClearTaxPartnerGuard` enforces path scope, Subject/Issuer CN, IP allowlist, and JWT role on top.
 
-  mutual_authentication {
-    mode            = "verify"               # require + verify the client cert
-    trust_store_arn = aws_lb_trust_store.cleartax.arn
-    # ignore_client_certificate_expiration = false   (default — reject expired)
-  }
+### Why a separate listener on 8443 rather than mutual_authentication on 443
 
-  default_action { type = "forward"; target_group_arn = aws_lb_target_group.api.arn }
-}
+ALB mTLS applies to the entire listener, not per rule. Once a listener is in `verify` mode, **every** request to it must present a valid client cert — the public 443 listener cannot host both unauthenticated traffic and the ClearTax surface. Putting the mTLS endpoint on its own port is the only way to keep public routes reachable without a client cert while still terminating mTLS on the partner surface. The port number is `var.cleartax_mtls_port` (default `8443`) in case it ever needs to move.
 
-resource "aws_lb_trust_store" "cleartax" {
-  name                             = "cleartax-partner-ca"
-  ca_certificates_bundle_s3_bucket = aws_s3_bucket.trust_store.bucket
-  ca_certificates_bundle_s3_key    = "cleartax-ops-ca.pem"
-}
-```
+A `verify`-mode listener rejects any request without a trusted client cert before the request reaches the app, so a plain `curl https://api.faatora.om:8443/api/partners/cleartax/...` without a cert is dropped at the ALB (TLS handshake failure) and does not even show up as a 401 in the API logs. ALB sets `X-Amzn-Mtls-Clientcert` to the URL-encoded PEM; the guard re-parses it as defence in depth.
 
-A `verify` mode listener rejects any request without a trusted client cert before the request reaches the app, so a plain `curl https://api.faatora.om/partners/cleartax/...` without a cert is dropped at the ALB (TLS handshake failure) and does not even show up as a 401 in the API logs. ALB sets `X-Amzn-Mtls-Clientcert` to the URL-encoded PEM; the API re-parses it as defence in depth.
+### Enabling the listener (per environment)
 
-**Follow-up:** the Terraform above belongs in `infra/modules/alb/main.tf`; the module does not exist yet. Track under its own PR after this one lands.
+Four tfvars must be set at plan time when `enable_cleartax_mtls = true`; resource preconditions in `mtls.tf` fail `terraform plan` with an actionable error otherwise, so a half-configured trust store never materialises:
+
+| tfvar | Example | Where it comes from |
+|---|---|---|
+| `enable_cleartax_mtls` | `true` | Committed. `true` in `infra/environments/production.tfvars`, `false` in `infra/environments/staging.tfvars`. |
+| `cleartax_ca_bundle_s3_bucket` | `"faatora-prod-cleartax-ts"` | Sealed tfvars file — not committed. |
+| `cleartax_ca_bundle_s3_key` | `"cleartax-ops-ca.pem"` | Sealed tfvars file — not committed. |
+| `alb_cert_arn` | `"arn:aws:acm:eu-central-1:...:certificate/..."` | Sealed tfvars file — not committed. Can reuse the public 443 cert. |
+| `cleartax_partner_cidrs` | `["203.0.113.0/24","2401:db00::/32"]` | Sealed tfvars file — must match `CLEARTAX_PARTNER_IP_ALLOWLIST` at the app layer (defence in depth). |
+
+### Operational flow — bringing the listener up in production
+
+1. Concatenate the ClearTax ops CA (root + intermediate as ClearTax ships them) into a single PEM file.
+2. Upload to the S3 object that `cleartax_ca_bundle_s3_bucket` / `cleartax_ca_bundle_s3_key` point at. The bucket should have versioning + object-lock on; that way a rollback is one `aws s3api get-object --version-id ...` away.
+3. Supply the sealed tfvars in the deploy workflow:
+   ```
+   terraform plan \
+     -var-file=environments/production.tfvars \
+     -var-file=environments/production.cleartax.tfvars   # sealed
+   ```
+4. Apply, then verify end-to-end from a ClearTax test cert:
+   ```
+   openssl s_client -connect api.faatora.om:8443 \
+     -cert cleartax-client.pem -key cleartax-client.key \
+     -servername api.faatora.om < /dev/null | grep -E 'Verify return code|subject='
+   curl --cert cleartax-client.pem --key cleartax-client.key \
+     https://api.faatora.om:8443/api/health
+   ```
+5. The exported Terraform outputs (`cleartax_trust_store_arn`, `cleartax_mtls_listener_arn`, `cleartax_mtls_port`) are available for downstream automation and dashboards.
+
+### CA bundle rotation
+
+The S3 object is the sync source — the trust store refreshes from it automatically within ~15 min of an upload. Zero-downtime rotation (overlap old + new CAs):
+
+1. Build the combined PEM: old CA(s) + new CA, in that order.
+2. Upload to the **same** S3 key (`cleartax_ca_bundle_s3_key`) — the Terraform state is unchanged.
+3. Wait up to ~15 min for ALB to pick up the new bundle, or force a sync:
+   ```
+   aws elbv2 modify-trust-store \
+     --trust-store-arn "$(terraform output -raw cleartax_trust_store_arn)" \
+     --ca-certificates-bundle-s3-bucket <bucket> \
+     --ca-certificates-bundle-s3-key cleartax-ops-ca.pem
+   ```
+4. Verify the new cert handshakes (openssl s_client above).
+5. Drop the old CA from the bundle at least 7 days after ClearTax confirms every workload is on the new cert, following the same upload/sync flow.
 
 ## Environment variables
 
