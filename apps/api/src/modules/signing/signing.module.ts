@@ -25,10 +25,14 @@ import { KmsSigner } from './kms-signer';
         const log = new Logger('SigningModule');
         const nodeEnv = process.env.NODE_ENV ?? 'development';
         if (nodeEnv === 'production') {
-          log.log(
-            `Booting KmsSigner (NODE_ENV=${nodeEnv}). Software signing is refused in production.`,
-          );
-          return new KmsSigner();
+          const keyId = process.env.KMS_SIGNING_KEY_ID;
+          if (!keyId) {
+            throw new Error(
+              'SigningModule: KMS_SIGNING_KEY_ID must be set when NODE_ENV=production',
+            );
+          }
+          log.log(`Booting KmsSigner (NODE_ENV=${nodeEnv}, keyId=${keyId}).`);
+          return new KmsSigner(keyId);
         }
         log.log(`Booting LocalSigner (NODE_ENV=${nodeEnv}). DEV ONLY — not for production.`);
         return new LocalSigner();
