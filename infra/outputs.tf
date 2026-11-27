@@ -33,6 +33,12 @@ output "cognito_client_id" {
   value       = var.enable_infra ? module.auth[0].client_id : null
 }
 
+output "cognito_client_secret_arn" {
+  description = "ARN of the Secrets Manager placeholder for the Cognito app client secret. Consumed by the ECS task definition via `secrets[].valueFrom`. Operator fills the actual value via the SM console (see docs/runbooks/prod-env-provisioning.md)."
+  value       = var.enable_infra ? module.auth[0].cognito_client_secret_arn : null
+  sensitive   = true
+}
+
 # ---- KMS ----
 
 output "kms_signing_key_arn" {
@@ -40,9 +46,19 @@ output "kms_signing_key_arn" {
   value       = var.enable_infra ? module.kms[0].signing_key_arn : null
 }
 
+output "kms_signing_key_alias" {
+  description = "KMS alias (e.g. alias/faatora-production-signing) for the invoice signing key. The API reads this through KMS_SIGNING_KEY_ID so the deploy overlay can pass an alias rather than a raw key id — rotating the key under the alias doesn't require a redeploy."
+  value       = var.enable_infra ? module.kms[0].signing_key_alias : null
+}
+
 output "kms_data_key_arn" {
   description = "KMS ARN for the tenant data encryption key."
   value       = var.enable_infra ? module.kms[0].data_key_arn : null
+}
+
+output "kms_data_key_alias" {
+  description = "KMS alias for the tenant data encryption key. The archive module encrypts S3 objects with this key; the API passes it to S3 PutObject via ARCHIVE_KMS_KEY_ID."
+  value       = var.enable_infra ? module.kms[0].data_key_alias : null
 }
 
 # ---- Queue ----
@@ -83,6 +99,12 @@ output "db_endpoint" {
 
 output "db_master_user_secret_arn" {
   description = "ARN of the managed master-user secret for the DB."
+  value       = var.enable_infra ? module.database[0].master_user_secret_arn : null
+  sensitive   = true
+}
+
+output "database_url_secret_arn" {
+  description = "ARN of the Secrets Manager secret the ECS task reads for DATABASE_URL. Today this points at the RDS-managed master-user secret (same ARN as db_master_user_secret_arn); the API container resolves the full `postgres://` URL from {username,password} + the DB endpoint at boot. When we later introduce a dedicated full-URL secret, flip this output to that ARN — the env overlay (infra/environments/*.env.json) references it by output name, so no workflow change will be needed."
   value       = var.enable_infra ? module.database[0].master_user_secret_arn : null
   sensitive   = true
 }

@@ -336,11 +336,25 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Terraform is needed in this job so the env-overlay step below can
+      # read `terraform output -json` for the `tf:` placeholders in
+      # infra/environments/production.env.json. The AWS credentials above
+      # are for the workload region (ECR/ECS live in eu-central-1); the
+      # Terraform backend sits in us-east-1, so `terraform init` passes
+      # its region through -backend-config and ignores the credentials
+      # region.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
       - name: Build and push API image
+        id: build
         env:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          set -euo pipefail
           docker build \
             -f docker/api.Dockerfile \
             -t "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG" \
@@ -348,12 +362,167 @@ jobs:
             .
           docker push "$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG"
           docker push "$REGISTRY/${ECR_REPOSITORY}:production"
+          echo "image_uri=$REGISTRY/${ECR_REPOSITORY}:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Force new ECS deployment
+      # Same pattern as deploy-staging.yml: pull the current task def,
+      # swap in the new image, overlay the committed env-var file, and
+      # register a fresh revision before pointing the service at it.
+      # The Terraform compute module has `ignore_changes =
+      # [container_definitions]` on the task-def resource specifically so
+      # this workflow owns the env/secret surface without fighting apply.
+      - name: Register task definition revision with real image + env overlay
+        id: register
+        env:
+          IMAGE_URI: ${{ steps.build.outputs.image_uri }}
+          TASK_DEF_FAMILY: ${{ env.ECS_SERVICE }}
         run: |
+          set -euo pipefail
+
+          # Download current task definition. --output json is explicit
+          # so a stray AWS_DEFAULT_OUTPUT=text in the runner environment
+          # cannot silently turn the body into tab-separated text that
+          # jq would then collapse to nothing.
+          aws ecs describe-task-definition \
+            --task-definition "$TASK_DEF_FAMILY" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --query 'taskDefinition' \
+            --output json \
+            > /tmp/task-def-current.json
+
+          if [ ! -s /tmp/task-def-current.json ] \
+             || ! jq empty /tmp/task-def-current.json 2>/dev/null; then
+            echo "::error::describe-task-definition did not return JSON" \
+                 "for family $TASK_DEF_FAMILY. Body was:" >&2
+            cat /tmp/task-def-current.json >&2 || true
+            exit 1
+          fi
+
+          # Swap the first container's image; strip server-managed
+          # fields that register-task-definition rejects.
+          jq \
+            --arg img "$IMAGE_URI" \
+            '.containerDefinitions[0].image = $img
+             | del(.taskDefinitionArn, .revision, .status,
+                   .requiresAttributes, .compatibilities,
+                   .registeredAt, .registeredBy)' \
+            /tmp/task-def-current.json \
+            > /tmp/task-def-new.json
+
+          # Patch env vars from the committed overlay. The overlay
+          # (infra/environments/production.env.json) carries both
+          # literal values and `tf:<output>` placeholders; the latter
+          # are resolved against `terraform output -json`.
+          pushd infra >/dev/null
+          terraform init -reconfigure -backend-config="${BACKEND_CONFIG}" >/dev/null
+          TF_OUT=$(terraform output -json)
+          popd >/dev/null
+
+          OVERLAY_FILE="infra/environments/production.env.json"
+
+          RESOLVED_OVERLAY=$(jq -c \
+            --argjson tf "$TF_OUT" \
+            '
+              def resolve(v):
+                if (v | type) == "string" and (v | startswith("tf:")) then
+                  ($tf[v[3:]].value // "")
+                else v end;
+
+              { environment: ([.environment[]? | {name, value: (.value | resolve(.))}]),
+                secrets:     ([.secrets[]?     | {name, valueFrom: (.valueFrom | resolve(.))}]) }
+            ' \
+            "$OVERLAY_FILE")
+
+          jq \
+            --argjson overlay "$RESOLVED_OVERLAY" \
+            '.containerDefinitions[0].environment = $overlay.environment
+             | .containerDefinitions[0].secrets    = $overlay.secrets' \
+            /tmp/task-def-new.json \
+            > /tmp/task-def-with-env.json
+          mv /tmp/task-def-with-env.json /tmp/task-def-new.json
+
+          # DATABASE_URL assembly. The RDS AWS-managed master-user
+          # secret stores {username,password} JSON, NOT a postgres://
+          # URL, so the App's env.ts can't consume the secret ARN
+          # directly via ECS `secrets:`. Mirror the migrate job's
+          # logic: pull the master secret, URL-encode the password,
+          # assemble the URL, inject as a plain env var that replaces
+          # the placeholder the overlay wrote. Masked before shell
+          # expansion.
+          DB_ID="faatora-production-pg"
+          DB_NAME="faatora"
+          ENDPOINT=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --query 'DBInstances[0].Endpoint.Address' \
+            --output text)
+          DB_SECRET_ARN=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --query 'DBInstances[0].MasterUserSecret.SecretArn' \
+            --output text)
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "$DB_SECRET_ARN" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --query SecretString \
+            --output text)
+          DB_USER=$(echo "$SECRET_JSON" | jq -r .username)
+          DB_PASS=$(echo "$SECRET_JSON" | jq -r .password)
+          DB_PASS_ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
+          DB_URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}?uselibpqcompat=true&sslmode=require"
+          echo "::add-mask::${DB_PASS}"
+          echo "::add-mask::${DB_PASS_ENC}"
+          echo "::add-mask::${DB_URL}"
+          jq \
+            --arg dburl "$DB_URL" \
+            '.containerDefinitions[0].environment |= map(
+               if .name == "DATABASE_URL" then .value = $dburl else . end
+             )' \
+            /tmp/task-def-new.json \
+            > /tmp/task-def-with-dburl.json
+          mv /tmp/task-def-with-dburl.json /tmp/task-def-new.json
+
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file:///tmp/task-def-new.json \
+            --region "$AWS_WORKLOAD_REGION" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "Registered new revision: $NEW_ARN"
+          echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
+
+      # On a register failure, dump both the describe output and the
+      # proposed revision so a jq slip or a missing TF output is
+      # diagnosable from the log without a rerun. The secret VALUES
+      # never land here — only the ARNs do, and the environment[]
+      # entries are literal strings from the overlay file.
+      - name: Show new revision contents
+        if: always() && steps.register.conclusion != 'skipped'
+        run: |
+          set +e
+          echo "=== intended image ===" >&2
+          jq -r '.containerDefinitions[0].image' /tmp/task-def-new.json >&2 \
+            || echo "(no task-def-new.json)" >&2
+          echo "=== intended env/secrets ===" >&2
+          jq '.containerDefinitions[0] | {environment, secrets}' /tmp/task-def-new.json >&2 \
+            || echo "(no task-def-new.json)" >&2
+          if [ "${{ steps.register.outcome }}" != "success" ]; then
+            echo "=== /tmp/task-def-current.json ===" >&2
+            cat /tmp/task-def-current.json >&2 2>/dev/null \
+              || echo "(no task-def-current.json)" >&2
+            echo "=== /tmp/task-def-new.json ===" >&2
+            cat /tmp/task-def-new.json >&2 2>/dev/null \
+              || echo "(no task-def-new.json)" >&2
+          fi
+
+      - name: Update ECS service to new task definition
+        env:
+          TASK_DEF_ARN: ${{ steps.register.outputs.task_def_arn }}
+        run: |
+          set -euo pipefail
           aws ecs update-service \
             --cluster "$ECS_CLUSTER" \
             --service "$ECS_SERVICE" \
+            --task-definition "$TASK_DEF_ARN" \
             --force-new-deployment \
             --region "$AWS_WORKLOAD_REGION"
 
