@@ -11,7 +11,9 @@ import {
   ACTIVE_FIRM_STORAGE_KEY,
   UnauthorizedError,
   getActiveFirmId,
+  getImpersonateTenantId,
   setActiveFirmId,
+  setImpersonateTenantId,
 } from '../../../lib/api';
 import { fetchMyFirms } from '../api';
 import type { Firm, FirmMembership } from '../types';
@@ -30,6 +32,16 @@ export interface FirmContextValue {
   switchFirm: (firmId: string | null) => void;
   /** Re-fetch the firm list, e.g. after creating a firm or accepting an invite. */
   refreshFirms: () => Promise<void>;
+  /**
+   * The client tenant the user is currently "acting as" (or null when no
+   * impersonation is active). When set, every API call made via the
+   * shared `apiFetch` helper carries `x-impersonate-tenant-id`.
+   */
+  impersonatingTenantId: string | null;
+  /** Start acting as a client tenant. Writes the tenant id to storage. */
+  startActingAs: (clientTenantId: string) => void;
+  /** Stop acting as the current client tenant. */
+  stopActingAs: () => void;
 }
 
 const noop = () => {
@@ -45,6 +57,9 @@ const defaultValue: FirmContextValue = {
   refreshFirms: async () => {
     /* placeholder */
   },
+  impersonatingTenantId: null,
+  startActingAs: noop,
+  stopActingAs: noop,
 };
 
 const FirmContext = createContext<FirmContextValue>(defaultValue);
@@ -62,6 +77,9 @@ export function FirmContextProvider({ children, loadOnMount = true }: FirmContex
   const [state, setState] = useState<FirmLoadState>('idle');
   const [firmList, setFirmList] = useState<FirmMembership[]>([]);
   const [activeFirmId, setActiveFirmIdState] = useState<string | null>(() => getActiveFirmId());
+  const [impersonatingTenantId, setImpersonatingTenantIdState] = useState<string | null>(() =>
+    getImpersonateTenantId(),
+  );
 
   const refreshFirms = useCallback(async () => {
     setState('loading');
@@ -108,6 +126,16 @@ export function FirmContextProvider({ children, loadOnMount = true }: FirmContex
     setActiveFirmIdState(firmId);
   }, []);
 
+  const startActingAs = useCallback((clientTenantId: string) => {
+    setImpersonateTenantId(clientTenantId);
+    setImpersonatingTenantIdState(clientTenantId);
+  }, []);
+
+  const stopActingAs = useCallback(() => {
+    setImpersonateTenantId(null);
+    setImpersonatingTenantIdState(null);
+  }, []);
+
   const value = useMemo<FirmContextValue>(() => {
     const active =
       activeFirmId != null
@@ -120,8 +148,20 @@ export function FirmContextProvider({ children, loadOnMount = true }: FirmContex
       state,
       switchFirm,
       refreshFirms,
+      impersonatingTenantId,
+      startActingAs,
+      stopActingAs,
     };
-  }, [activeFirmId, firmList, refreshFirms, state, switchFirm]);
+  }, [
+    activeFirmId,
+    firmList,
+    impersonatingTenantId,
+    refreshFirms,
+    startActingAs,
+    state,
+    stopActingAs,
+    switchFirm,
+  ]);
 
   return <FirmContext.Provider value={value}>{children}</FirmContext.Provider>;
 }

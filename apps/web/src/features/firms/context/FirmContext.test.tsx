@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { act, render, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { FirmContextProvider, useFirmContext } from './FirmContext';
-import { ACTIVE_FIRM_STORAGE_KEY } from '../../../lib/api';
+import { ACTIVE_FIRM_STORAGE_KEY, IMPERSONATE_TENANT_STORAGE_KEY } from '../../../lib/api';
 
 function mockFetchJson(body: unknown, status = 200) {
   const headers = new Headers({ 'content-type': 'application/json' });
@@ -123,5 +123,41 @@ describe('FirmContext', () => {
       </FirmContextProvider>,
     );
     expect(getByText('hello')).toBeInTheDocument();
+  });
+
+  it('startActingAs persists the impersonated tenant id and exposes it', async () => {
+    mockFetchJson([]);
+    const { result } = renderHook(() => useFirmContext(), {
+      wrapper: ({ children }) => (
+        <FirmContextProvider loadOnMount={false}>{children}</FirmContextProvider>
+      ),
+    });
+    await waitFor(() => expect(result.current.state).toBe('ready'));
+
+    act(() => {
+      result.current.startActingAs('client-123');
+    });
+
+    expect(result.current.impersonatingTenantId).toBe('client-123');
+    expect(localStorage.getItem(IMPERSONATE_TENANT_STORAGE_KEY)).toBe('client-123');
+  });
+
+  it('stopActingAs clears the impersonated tenant id', async () => {
+    localStorage.setItem(IMPERSONATE_TENANT_STORAGE_KEY, 'client-99');
+    mockFetchJson([]);
+    const { result } = renderHook(() => useFirmContext(), {
+      wrapper: ({ children }) => (
+        <FirmContextProvider loadOnMount={false}>{children}</FirmContextProvider>
+      ),
+    });
+    await waitFor(() => expect(result.current.state).toBe('ready'));
+    expect(result.current.impersonatingTenantId).toBe('client-99');
+
+    act(() => {
+      result.current.stopActingAs();
+    });
+
+    expect(result.current.impersonatingTenantId).toBeNull();
+    expect(localStorage.getItem(IMPERSONATE_TENANT_STORAGE_KEY)).toBeNull();
   });
 });

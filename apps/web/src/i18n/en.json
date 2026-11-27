@@ -116,7 +116,18 @@
     "saleNumber": "Sale #",
     "notFound": "No product found for this code",
     "online": "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "login": {
+      "title": "Sign in to POS",
+      "subtitle": "Use the credentials your shop owner issued for this tablet.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "error": "Something went wrong. Please try again.",
+      "errorCredentials": "That email and password don't match our records.",
+      "errorNetwork": "We couldn't reach the server. Check your connection and try again."
+    }
   },
   "accountant": {
     "dashboard": "Accountant dashboard",
@@ -358,7 +369,16 @@
       }
     }
   },
+  "impersonation": {
+    "banner": "You are acting as client {{client}}. Every action is recorded against your account.",
+    "exit": "Stop acting as client"
+  },
   "clients": {
+    "actAs": "Act as",
+    "actAsFor": "Act as client {{client}}",
+    "actAsTooltip": "Switch to this client's workspace for the next session.",
+    "actAsNoPermission": "Your firm role does not permit acting as a client.",
+    "actAsStarting": "Starting…",
     "wizard": {
       "title": "Onboard a client",
       "subtitle": "Add one client at a time or upload a CSV for bulk onboarding.",

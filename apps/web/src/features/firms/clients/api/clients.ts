@@ -109,3 +109,57 @@ export function revokeClient(firmId: string, tenantId: string): Promise<void> {
     { method: 'DELETE' },
   );
 }
+
+/**
+ * Impersonation ticket returned by the server once the "act as this
+ * client" handshake exists on the backend. Shape is intentionally minimal
+ * — the UI only needs the tenant id it is now scoped to; cross-tenant
+ * authorisation happens in `apps/api/src/auth/*` guards.
+ */
+export interface ImpersonationTicket {
+  firmId: string;
+  clientTenantId: string;
+  /** Absolute expiry so the banner can warn before the session drops. */
+  expiresAt?: string;
+}
+
+/**
+ * TODO(backend-follow-up): POST /firms/:id/clients/:tenantId/act-as is not
+ * yet implemented. Until it is, the frontend records the impersonation
+ * intent client-side (via FirmContext.startActingAs, which writes
+ * `faatora_impersonate_tenant_id`) and the shared apiFetch helper sends
+ * `x-impersonate-tenant-id` on every subsequent request. The backend PR
+ * that adds the controller should:
+ *
+ *   1. Validate that (firmId, clientTenantId) is a live link under
+ *      `firm_client_tenants` and that the caller's firm role is >=
+ *      `staff` (read_only must be rejected here too, as a defence in
+ *      depth — the UI already hides the button for read-only members).
+ *   2. Short-circuit the TenantGuard's membership check for this one
+ *      session, re-scoping `req.tenantId` to the impersonated tenant.
+ *   3. Write an audit row (actor_user_id, firm_id, target_tenant_id,
+ *      started_at) so every impersonated action is attributable.
+ *
+ * When that controller lands, flip this to call it and propagate its
+ * response (ticket) to the caller; the FirmContext API does not change.
+ */
+export async function startImpersonation(
+  firmId: string,
+  clientTenantId: string,
+): Promise<ImpersonationTicket> {
+  try {
+    return await apiPost<ImpersonationTicket>(
+      `/firms/${encodeURIComponent(firmId)}/clients/${encodeURIComponent(clientTenantId)}/act-as`,
+      {},
+    );
+  } catch (err) {
+    // While the endpoint doesn't exist yet a 404 is expected; we treat
+    // that as "frontend-only impersonation" so the UX works end-to-end
+    // and the backend PR can tighten the check without a web rev.
+    const status = (err as { status?: number }).status;
+    if (status === 404 || status === 405) {
+      return { firmId, clientTenantId };
+    }
+    throw err;
+  }
+}

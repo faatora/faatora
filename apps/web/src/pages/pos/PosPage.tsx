@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { getAccessToken, isTokenExpired, setAccessToken } from '../../lib/api';
 import {
   createSale,
   listProducts,
@@ -71,7 +73,23 @@ function computeTotals(lines: CartLine[]): { subtotal: number; vat: number; gran
 
 export function PosPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const lang = (i18n.language || 'en').split('-')[0];
+
+  // Guard: a POS tablet needs a signed-in clerk before anything else
+  // happens. Anything falsy or an expired JWT sends the user to
+  // /pos/login; we clear the stored token in that case so a stale one
+  // isn't quietly echoed back on the next request.
+  const [authChecked, setAuthChecked] = useState(false);
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token || isTokenExpired(token)) {
+      if (token) setAccessToken(null);
+      navigate('/pos/login', { replace: true });
+      return;
+    }
+    setAuthChecked(true);
+  }, [navigate]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productsError, setProductsError] = useState<string | null>(null);
@@ -90,6 +108,7 @@ export function PosPage() {
 
   // --- product catalog -----------------------------------------------------
   useEffect(() => {
+    if (!authChecked) return;
     let active = true;
     void listProducts()
       .then((p) => {
@@ -102,7 +121,7 @@ export function PosPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authChecked]);
 
   const totals = useMemo(() => computeTotals(cart), [cart]);
 
@@ -295,6 +314,11 @@ export function PosPage() {
       setSubmitting(false);
     }
   };
+
+  // While the auth check is in flight (or the redirect is landing) render
+  // nothing: a half-painted POS before the navigate call lands is worse
+  // than a blank frame.
+  if (!authChecked) return null;
 
   if (completedSale) {
     return (

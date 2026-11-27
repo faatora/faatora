@@ -1,6 +1,14 @@
-// TODO: wire up a real login UI; for now we read the bearer token and the active
-// tenant id out of localStorage ('faatora_access_token', 'faatora_tenant_id').
-// Pattern mirrors apps/web/src/pages/checker/api.ts.
+// POS-specific REST bindings. Auth, active-tenant, firm and impersonation
+// headers are managed in the shared `lib/api` module and surfaced via
+// `buildDefaultHeaders`; the login UI (`pages/pos/LoginPage.tsx`) is the
+// only place that writes to those storage keys for POS users.
+
+import {
+  ACCESS_TOKEN_STORAGE_KEY,
+  ACTIVE_TENANT_STORAGE_KEY,
+  getAccessToken,
+  getActiveTenantId,
+} from '../../lib/api';
 
 export type TenderMethod = 'cash' | 'card' | 'mixed';
 
@@ -69,25 +77,20 @@ export class PosApiError extends Error {
   }
 }
 
-function readLocal(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
 function authHeaders(): Record<string, string> {
   const h: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-correlation-id': crypto.randomUUID(),
   };
-  const token = readLocal('faatora_access_token');
+  const token = getAccessToken();
   if (token) h['Authorization'] = `Bearer ${token}`;
-  const tenant = readLocal('faatora_tenant_id');
+  const tenant = getActiveTenantId();
   if (tenant) h['x-tenant-id'] = tenant;
   return h;
 }
+
+// Re-export for tests and legacy callers that still reference the raw keys.
+export { ACCESS_TOKEN_STORAGE_KEY, ACTIVE_TENANT_STORAGE_KEY };
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
