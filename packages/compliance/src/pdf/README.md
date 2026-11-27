@@ -93,7 +93,7 @@ trips and is covered by unit tests.
 returning, and sets `pdfA3Conformant` from the validator's result.
 Callers never have to run the validator by hand.
 
-The validator opens the finished PDF with `pdf-lib` and asserts six
+The validator opens the finished PDF with `pdf-lib` and asserts eight
 invariants. Each failed check adds one entry to
 `conformanceErrors`; `pdfA3Conformant` is `true` IFF every check
 passed, and `conformanceLevel` is the `pdfaid:conformance` value
@@ -119,6 +119,26 @@ found on the XMP packet.
    array and every filespec dictionary must declare `/AFRelationship`
    ∈ {Source, Data, Alternative, Supplement, Unspecified}. This is the
    specifically PDF/A-3 requirement that distinguishes it from PDF/A-2.
+7. **Every font used on a page is embedded.** The validator walks each
+   page's `/Resources /Font` dict and demands one of:
+   - `/Type0` composite fonts: the first `/DescendantFonts` entry must
+     carry a `/FontDescriptor` with an embedded `/FontFile`,
+     `/FontFile2`, or `/FontFile3` stream.
+   - `/TrueType` or `/Type1` fonts: same `/FontFile*` requirement on
+     their `/FontDescriptor`, OR — only when no `/FontDescriptor` is
+     present — a `/BaseFont` that is an exact match for one of the 14
+     standard PDF Type1 fonts (Helvetica, Times-Roman, Courier,
+     Symbol, ZapfDingbats and their bold/italic/oblique variants).
+   - `/Type3` fonts: accepted. Their glyph programs live in `/CharProcs`
+     streams inside the PDF itself, so the font is embedded by
+     construction (veraPDF reads ISO 19005-1 § 6.3.7 the same way).
+8. **ICC profile integrity.** When an `/OutputIntents` entry uses the
+   embedded-profile form (`/DestOutputProfile`), the validator reads
+   the stream bytes and requires the ICC v2/v4 header shape: at least
+   128 bytes long with the ASCII signature `acsp` at bytes 36..39. The
+   named-sRGB form (identifier-only) still skips this check — PDF/A
+   §6.2.2 lets us name the standard sRGB IEC 61966-2.1 condition
+   without embedding its profile bytes.
 
 What the renderer DOES on top of these:
 
@@ -137,17 +157,18 @@ The structural validator is the first gate, not the only one. veraPDF
 should continue to run as a sidecar before an archive is sealed, because
 these follow-ups are deliberately out of scope here:
 
-- **Font embedding / subsetting** is NOT checked. Walking every page's
-  `/Resources /Font` tree and asserting a `/FontFile{,2,3}` on each
-  descriptor is possible, but hasn't earned its keep yet: Chromium's
-  print pipeline embeds subsetted fonts already, and a regression
-  there is caught by veraPDF. Follow-up task.
 - **Transparency groups, colour spaces per content stream, ActualText
   coverage** — PDF/A-2 concerns that veraPDF validates thoroughly and
   that we do not re-implement.
-- **ICC profile well-formedness.** The validator accepts any
-  `/DestOutputProfile` stream as valid; veraPDF parses the actual
-  ICC bytes and rejects malformed profiles.
+- **Full ICC profile parse.** The validator confirms the ICC header is
+  present (128 bytes, `acsp` at offset 36) and logs a `console.debug`
+  line when the data colour space is not one of `RGB `, `CMYK`,
+  `GRAY`, `LAB `, but does not parse the tag table or verify the
+  profile's internal signatures. veraPDF does.
+- **Glyph coverage per font subset.** The validator confirms every
+  font is embedded, but does not re-walk the content streams to prove
+  that every glyph a page references is present in the embedded
+  subset. veraPDF catches a subset that is missing a used glyph.
 
 ### The validator is the writer's spec
 
@@ -175,11 +196,14 @@ side fails fast.
 - **Sandbox** — the renderer passes `--no-sandbox` to Chromium so it
   works in rootful containers. Keep the container non-root in prod
   and drop this flag if the host already provides a user namespace.
-- **veraPDF** — the in-process validator covers the six structural
-  checks listed above and flips `pdfA3Conformant` accordingly. Keep
-  veraPDF scheduled as a sidecar before an archive is sealed: font
-  embedding, ICC profile integrity and transparency rules are still
-  out of scope for the in-process check and veraPDF catches them.
+- **veraPDF** — the in-process validator covers the eight structural
+  checks listed above (header, `/ID`, XMP, OutputIntents + sRGB,
+  `/AF`+`/AFRelationship`, font embedding, ICC header) and flips
+  `pdfA3Conformant` accordingly. Keep veraPDF scheduled as a sidecar
+  before an archive is sealed: transparency rules, per-content-stream
+  colour spaces, full ICC tag-table parsing and glyph-coverage
+  checking are still out of scope for the in-process check and
+  veraPDF catches them.
 
 ## Known limitations
 
