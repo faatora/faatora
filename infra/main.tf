@@ -78,6 +78,13 @@ module "compute" {
   # the container. Current CI flow still resolves the URL on the runner
   # and injects it as a task env override.
   rds_master_user_secret_arn = module.database[0].master_user_secret_arn
+  # The task EXECUTION role gains secretsmanager:GetSecretValue on the
+  # Cognito client-secret ARN that PR #39's env overlay references via
+  # `secrets:[{name:COGNITO_CLIENT_SECRET, valueFrom:<arn>}]`. ECS pulls
+  # `secrets[].valueFrom` via the execution role at task start; without
+  # this grant the tasks fail with ResourceInitializationError before
+  # the container's PID 1 runs. See infra/modules/compute/secrets.tf.
+  cognito_client_secret_arn = module.auth[0].cognito_client_secret_arn
 
   # ClearTax §5.7 partner mTLS listener + trust store (see
   # modules/compute/mtls.tf and docs/runbooks/cleartax-partner-access.md).

@@ -93,6 +93,12 @@ variable "rds_master_user_secret_arn" {
   default     = ""
 }
 
+variable "cognito_client_secret_arn" {
+  type        = string
+  description = "ARN of the Secrets Manager secret the API task definition references through `secrets:[{name:COGNITO_CLIENT_SECRET, valueFrom:<arn>}]` (see PR #39's env overlay). ECS resolves `secrets[].valueFrom` via the TASK EXECUTION role at task start, so the role is granted `secretsmanager:GetSecretValue` on this ARN. Empty string disables the grant for dev/CI stacks that do not provision the Cognito client secret; the ECS task start-up will then fail with a ResourceInitializationError the moment the overlay references the ARN, which is intentionally loud. The secret is encrypted with the AWS-managed `aws/secretsmanager` KMS key (see `infra/modules/auth/main.tf` — no `kms_key_id` is set on `aws_secretsmanager_secret.cognito_client_secret`), so no explicit `kms:Decrypt` grant is needed; the account implicitly holds Decrypt on the AWS-managed key."
+  default     = ""
+}
+
 variable "ecr_repository_name" {
   type        = string
   description = "Name of the ECR repository the deploy-image job pushes to. The migrate task definition references $${account}.dkr.ecr.$${region}.amazonaws.com/$${name}:staging so a reused image always matches the tag the deploy pipeline publishes."

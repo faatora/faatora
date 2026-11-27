@@ -527,11 +527,87 @@ jobs:
             --region "$AWS_WORKLOAD_REGION"
 
       - name: Wait for service stable
+        id: wait-service
         run: |
           aws ecs wait services-stable \
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_SERVICE" \
             --region "$AWS_WORKLOAD_REGION"
+
+      # Service-stable failures (failedTasks ticking up on the rolling
+      # deployment, tasks never passing the ALB target-group probe,
+      # ResourceInitializationError on `secrets:[].valueFrom`, missing
+      # env vars at boot, ...) are invisible from the exit code of
+      # `aws ecs wait` alone -- the step just times out after 10 minutes
+      # with no detail. This dumps three complementary slices so the
+      # next engineer on-call has the real cause in the Actions log
+      # without opening the console. Mirrors the staging-side step.
+      # continue-on-error so a diagnostic failure does not eclipse the
+      # real `aws ecs wait` failure above.
+      - name: Dump ECS service diagnostics on failure
+        id: diag-service-stable
+        if: failure() && steps.wait-service.outcome == 'failure'
+        continue-on-error: true
+        run: |
+          set +e
+          echo "::group::Last 10 ECS service events ($ECS_SERVICE)"
+          aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --query 'services[0].events[:10]' \
+            --output json
+          echo "::endgroup::"
+
+          echo "::group::Recently stopped tasks"
+          STOPPED_ARNS=$(aws ecs list-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --service-name "$ECS_SERVICE" \
+            --desired-status STOPPED \
+            --region "$AWS_WORKLOAD_REGION" \
+            --max-items 5 \
+            --query 'taskArns' \
+            --output text)
+          if [ -n "$STOPPED_ARNS" ] && [ "$STOPPED_ARNS" != "None" ]; then
+            STOPPED_ARNS=$(echo "$STOPPED_ARNS" | tr '\t' '\n' | grep -E '^arn:' || true)
+            if [ -n "$STOPPED_ARNS" ]; then
+              aws ecs describe-tasks \
+                --cluster "$ECS_CLUSTER" \
+                --tasks $STOPPED_ARNS \
+                --region "$AWS_WORKLOAD_REGION" \
+                --query 'tasks[].{stoppedReason:stoppedReason, stopCode:stopCode, taskArn:taskArn, containers:containers[].{name:name, exitCode:exitCode, reason:reason}}' \
+                --output json
+              LATEST_STOPPED=$(echo "$STOPPED_ARNS" | head -n1)
+              echo "latest_stopped=$LATEST_STOPPED" >> "$GITHUB_OUTPUT"
+            else
+              echo "(no stopped task ARNs after filtering)"
+            fi
+          else
+            echo "(no stopped tasks returned by list-tasks)"
+          fi
+          echo "::endgroup::"
+
+          LOG_GROUP="/ecs/faatora-production-app"
+          if ! aws logs describe-log-groups \
+                --log-group-name-prefix "$LOG_GROUP" \
+                --region "$AWS_WORKLOAD_REGION" \
+                --query 'logGroups[0].logGroupName' \
+                --output text 2>/dev/null | grep -q "$LOG_GROUP"; then
+            DISCOVERED=$(aws logs describe-log-groups \
+              --log-group-name-prefix "/ecs/faatora-production" \
+              --region "$AWS_WORKLOAD_REGION" \
+              --query 'logGroups[0].logGroupName' \
+              --output text 2>/dev/null || echo "")
+            if [ -n "$DISCOVERED" ] && [ "$DISCOVERED" != "None" ]; then
+              LOG_GROUP="$DISCOVERED"
+            fi
+          fi
+          echo "::group::App CloudWatch logs (last 15m, $LOG_GROUP)"
+          aws logs tail "$LOG_GROUP" \
+            --region "$AWS_WORKLOAD_REGION" \
+            --since 15m \
+            || echo "(no log events; log group may not exist yet or task never wrote)"
+          echo "::endgroup::"
 
   smoke-test:
     name: Smoke test API over the ALB
