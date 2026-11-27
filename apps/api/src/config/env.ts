@@ -77,6 +77,15 @@ const envSchema = z.object({
   // Both allow boot without values so unrelated test suites keep working.
   PAGERDUTY_WEBHOOK_SECRET: z.string().optional(),
   PAGERDUTY_ROUTING_KEY: z.string().optional(),
+
+  // Accountant impersonation ("act as this client"). Controls how long a
+  // POST /firms/:id/clients/:tenantId/act-as session stays live before
+  // TenantGuard starts rejecting the X-Impersonate-Tenant-Id header on
+  // follow-up requests. Default 10 minutes (600_000 ms); operators can
+  // tune it down for short-lived read checks or up during a scheduled
+  // close-out. The frontend also honours this via the `expiresAt` the
+  // endpoint returns.
+  IMPERSONATION_SESSION_TTL_MS: z.coerce.number().int().positive().default(600_000),
 });
 export type Env = z.infer<typeof envSchema>;
 let cached: Env | null = null;
