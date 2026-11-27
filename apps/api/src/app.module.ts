@@ -72,6 +72,12 @@ import { AlertsModule } from './modules/alerts/alerts.module';
     ClearanceModule,
     AuditModule,
     TaxDocumentsModule,
+    // AlertsModule carries the PagerDuty webhook controller plus the
+    // PlatformStatusService / pd_events counter wiring (#31). The
+    // module was imported but never added to this list; without it the
+    // webhook route is unreachable and the counter never increments.
+    // ESLint's `no-unused-vars` surfaced the gap after #31 landed.
+    AlertsModule,
   ],
 })
 export class AppModule {}
