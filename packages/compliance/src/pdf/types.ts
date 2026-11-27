@@ -115,13 +115,26 @@ export interface InvoiceRenderOutput {
   /** The filename under which the UBL XML was embedded. */
   embeddedXmlName: string;
   /**
-   * Whether the PDF was successfully flagged as PDF/A-3 conformant.
-   *
-   * At EP4, pdf-lib is not a full PDF/A conformance producer: it can
-   * attach the XML using /AFRelationship and add basic metadata, but
-   * ICC profile embedding, XMP packet enrichment and OutputIntent
-   * validation still require a downstream veraPDF step. The flag is
-   * therefore `false` at the moment — see `pdf/README.md`.
+   * Whether the PDF passes the structural PDF/A-3 checks run by
+   * {@link import('./validator.js').validatePdfA3}. `true` IFF every
+   * check in that validator's docstring passed; `false` with details on
+   * `conformanceErrors` otherwise. The flag is a pre-filter for the
+   * veraPDF sidecar: a `false` here is a hard fail, a `true` is a
+   * strong-but-not-final signal that veraPDF should accept the file.
    */
   pdfA3Conformant: boolean;
+  /**
+   * The `pdfaid:conformance` level found in the XMP metadata packet,
+   * or `undefined` when no level could be read. Present on both
+   * conformant and non-conformant outputs — a PDF with the right level
+   * tag can still fail other checks.
+   */
+  conformanceLevel?: 'A' | 'B' | 'U';
+  /**
+   * Human-readable reasons the validator rejected the PDF, one entry
+   * per failed check. Present IFF `pdfA3Conformant === false`; callers
+   * can log this list verbatim or surface it on an operator dashboard
+   * to triage why a given firm's renders are failing.
+   */
+  conformanceErrors?: readonly string[];
 }

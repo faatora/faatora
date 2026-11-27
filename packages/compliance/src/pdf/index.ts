@@ -28,3 +28,6 @@ export { buildInvoiceHtml } from './template-html.js';
 
 export { renderPdfA3 } from './renderer.js';
 export type { RenderOptions } from './renderer.js';
+
+export { validatePdfA3 } from './validator.js';
+export type { PdfA3ConformanceLevel, PdfA3ValidationResult } from './validator.js';

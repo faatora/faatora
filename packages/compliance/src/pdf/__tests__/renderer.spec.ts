@@ -139,9 +139,17 @@ describe('renderPdfA3', () => {
     expect(reopened.getSubject()).toContain('INV-2026-0001');
   });
 
-  it('reports pdfA3Conformant=false at EP4 (veraPDF validation pending)', async () => {
+  it('reports pdfA3Conformant=true after the structural validator passes', async () => {
     const out = await renderPdfA3(sampleInvoice());
-    expect(out.pdfA3Conformant).toBe(false);
+    // If this fails, the first thing to look at is `conformanceErrors`:
+    // it's a bulleted list of exactly which check the writer regressed.
+    expect(out.conformanceErrors).toBeUndefined();
+    expect(out.pdfA3Conformant).toBe(true);
+  });
+
+  it('claims PDF/A-3B conformance (level B, since we do not produce a tagged PDF)', async () => {
+    const out = await renderPdfA3(sampleInvoice());
+    expect(out.conformanceLevel).toBe('B');
   });
 
   it('includes the QR payload (as base64 TLV data) by placing a decodable QR img on the page', async () => {

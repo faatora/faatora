@@ -9,13 +9,16 @@
  *   4. Print the HTML to PDF through headless Chromium (Playwright).
  *   5. Post-process with pdf-lib: embed the UBL XML as an attachment,
  *      flag it with /AFRelationship Source (ZUGFeRD / Factur-X pattern),
- *      and write Fawtara-specific metadata.
+ *      write the XMP metadata packet (pdfaid:part=3, conformance=B), add
+ *      the sRGB OutputIntents entry, and write Fawtara-specific Info
+ *      dictionary metadata.
+ *   6. Validate the finished PDF against the structural PDF/A-3 checks
+ *      in {@link validatePdfA3}. The returned flag is set iff every
+ *      check passed; any failures are surfaced on `conformanceErrors`
+ *      for the caller to log or block on.
  *
- * PDF/A-3 note: at EP4 we do not claim conformance. Steps 1..5 produce
- * a PDF with the UBL XML correctly attached and ready for signing, but
- * ICC profile + OutputIntent + XMP packet validation still require a
- * downstream veraPDF run. See `pdf/README.md` for the gap list and the
- * planned production-container updates.
+ * The validator is the writer's spec: when a new field is required, add
+ * the check there first, then fix the writer below to satisfy it.
  */
 
 import { promises as fs } from 'node:fs';
@@ -23,11 +26,12 @@ import path from 'node:path';
 import type { Browser } from 'playwright';
 import { chromium } from 'playwright';
 import QRCode from 'qrcode';
-import { AFRelationship, PDFDocument } from 'pdf-lib';
+import { AFRelationship, PDFArray, PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib';
 
 import { encodeInvoiceQrTlv } from './qr-tlv.js';
 import { buildInvoiceHtml } from './template-html.js';
 import type { InvoiceRenderInput, InvoiceRenderOutput } from './types.js';
+import { validatePdfA3 } from './validator.js';
 
 export interface RenderOptions {
   /**
@@ -112,9 +116,78 @@ function toPdfDate(timestamp: string): string {
   return `D:${String(d.getUTCFullYear())}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
 }
 
+/** Escape a string for safe inclusion inside an XML text node or attribute. */
+function xmlEscape(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 /**
- * Attach the UBL XML to the PDF bytes with ZUGFeRD-style `/AFRelationship`
- * and populate Info dictionary entries. Returns the rewritten PDF.
+ * Build the XMP metadata packet that declares PDF/A-3 conformance.
+ *
+ * The packet is the minimum shape a PDF/A validator looks for:
+ *   - a surrounding `<?xpacket ... ?>` wrapper so legacy readers can
+ *     still fish it out of the file stream,
+ *   - a single `<rdf:Description>` carrying the Dublin Core, XMP Basic
+ *     and pdfaid namespaces,
+ *   - `pdfaid:part=3` and `pdfaid:conformance=B` so the file claims
+ *     PDF/A-3B. Level B is the right choice here: the PDF carries no
+ *     structure tree (we are not producing a tagged PDF), so levels A
+ *     and U would be false claims.
+ */
+function buildXmpPacket(input: InvoiceRenderInput, createdAt: string): string {
+  const title = `${input.seller.name.en} - ${input.invoiceNumber}`;
+  const author = input.seller.name.en;
+  const subject = `Tax invoice ${input.invoiceNumber}`;
+  const producer = 'Fawtara PDF/A-3 renderer';
+  // The xpacket "begin" attribute carries a U+FEFF BOM so legacy packet
+  // scanners can detect the encoding. Keep it as an explicit escape in
+  // the source — a raw BOM character here trips `no-irregular-whitespace`.
+  const bom = '\u{FEFF}';
+  return `<?xpacket begin="${bom}" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Fawtara XMP 1.0">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about=""
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+        xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <dc:format>application/pdf</dc:format>
+      <dc:title>
+        <rdf:Alt>
+          <rdf:li xml:lang="x-default">${xmlEscape(title)}</rdf:li>
+        </rdf:Alt>
+      </dc:title>
+      <dc:creator>
+        <rdf:Seq>
+          <rdf:li>${xmlEscape(author)}</rdf:li>
+        </rdf:Seq>
+      </dc:creator>
+      <dc:description>
+        <rdf:Alt>
+          <rdf:li xml:lang="x-default">${xmlEscape(subject)}</rdf:li>
+        </rdf:Alt>
+      </dc:description>
+      <xmp:CreateDate>${xmlEscape(createdAt)}</xmp:CreateDate>
+      <xmp:ModifyDate>${xmlEscape(createdAt)}</xmp:ModifyDate>
+      <xmp:CreatorTool>${xmlEscape(producer)}</xmp:CreatorTool>
+      <pdf:Producer>${xmlEscape(producer)}</pdf:Producer>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`;
+}
+
+/**
+ * Attach the UBL XML to the PDF bytes with ZUGFeRD-style `/AFRelationship`,
+ * install the XMP metadata stream and the sRGB OutputIntents entry so
+ * the file can satisfy the PDF/A-3 structural checks, and populate the
+ * Info dictionary. Returns the rewritten PDF bytes.
  */
 async function attachUblAndTagMetadata(
   pdfBytes: Uint8Array,
@@ -128,8 +201,8 @@ async function attachUblAndTagMetadata(
   doc.setSubject(`Tax invoice ${input.invoiceNumber}`);
   doc.setProducer('Fawtara PDF/A-3 renderer');
   doc.setCreator('Fawtara PDF/A-3 renderer');
-  const created = toPdfDate(input.issueTimestamp);
-  if (created) {
+  const createdAtPdf = toPdfDate(input.issueTimestamp);
+  if (createdAtPdf) {
     doc.setCreationDate(new Date(input.issueTimestamp));
     doc.setModificationDate(new Date(input.issueTimestamp));
   }
@@ -145,15 +218,65 @@ async function attachUblAndTagMetadata(
     afRelationship: AFRelationship.Source,
   });
 
+  // --- PDF/A-3 required structure -----------------------------------
+  const context = doc.context;
+  const catalog = doc.catalog;
+
+  // XMP metadata stream — written uncompressed (no /Filter) so external
+  // tools can locate the xpacket wrapper without having to decode.
+  const createdAtIso = new Date(input.issueTimestamp).toISOString();
+  const xmpPacket = buildXmpPacket(input, createdAtIso);
+  const xmpStreamRef = context.register(
+    context.stream(xmpPacket, {
+      Type: 'Metadata',
+      Subtype: 'XML',
+    }),
+  );
+  catalog.set(PDFName.of('Metadata'), xmpStreamRef);
+
+  // sRGB OutputIntent — identifier-only form. Per PDF/A §6.2.2 the ICC
+  // profile may be omitted when the OutputConditionIdentifier names a
+  // registered printing condition. "sRGB" is the ICC-registered entry
+  // for sRGB IEC61966-2.1, which every PDF/A validator recognises.
+  //
+  // The spec calls for the identifier to be a text string; pdf-lib's
+  // `context.obj` turns bare JS strings into /Name objects, so we wrap
+  // the human-readable fields with `PDFString.of` explicitly.
+  const outputIntent = context.obj({
+    Type: 'OutputIntent',
+    S: 'GTS_PDFA1',
+    OutputConditionIdentifier: PDFString.of('sRGB'),
+    RegistryName: PDFString.of('http://www.color.org'),
+    Info: PDFString.of('sRGB IEC61966-2.1'),
+  });
+  const outputIntents = PDFArray.withContext(context);
+  outputIntents.push(outputIntent);
+  catalog.set(PDFName.of('OutputIntents'), outputIntents);
+
+  // Trailer /ID — pdf-lib writes one on save, but we set an explicit
+  // deterministic value so the validator's check 2 does not depend on
+  // save-time behaviour. The ID is a pair of identical hex strings: the
+  // first is the file's permanent identifier, the second updates on
+  // every revision; for a freshly-minted PDF they are the same.
+  const idBytes = Buffer.from(`${input.invoiceNumber}|${input.issueTimestamp}`, 'utf-8').toString(
+    'hex',
+  );
+  const idHex = PDFHexString.of(idBytes.padEnd(32, '0').slice(0, 32).toUpperCase());
+  const idArray = PDFArray.withContext(context);
+  idArray.push(idHex);
+  idArray.push(idHex);
+  context.trailerInfo.ID = idArray;
+
   return doc.save();
 }
 
 /**
  * Render a PDF/A-3 invoice.
  *
- * Returns the PDF bytes, the embedded attachment name, and a flag
- * indicating whether PDF/A-3 conformance has been verified. At EP4
- * the flag is always `false` — see module docstring and README.
+ * Returns the PDF bytes, the embedded attachment name, the conformance
+ * flag set by the structural validator, and — when non-empty — the
+ * conformance level and any validator errors. Callers decide whether a
+ * failed validation blocks the invoice or merely gets logged.
  */
 export async function renderPdfA3(
   invoice: InvoiceRenderInput,
@@ -180,10 +303,16 @@ export async function renderPdfA3(
   // 4. Attach UBL XML and write metadata
   const finalPdf = await attachUblAndTagMetadata(rawPdf, invoice);
 
+  // 5. Validate PDF/A-3 conformance structurally. We do not throw on a
+  // failed validation — the caller owns the policy decision about
+  // whether to block the invoice or merely log the failure.
+  const validation = await validatePdfA3(Buffer.from(finalPdf));
+
   return {
     pdfBytes: finalPdf,
     embeddedXmlName: invoice.embeddedXmlName,
-    // PDF/A-3 conformance validation is TODO — see pdf/README.md.
-    pdfA3Conformant: false,
+    pdfA3Conformant: validation.conformant,
+    conformanceLevel: validation.level ?? undefined,
+    conformanceErrors: validation.errors.length ? validation.errors : undefined,
   };
 }
