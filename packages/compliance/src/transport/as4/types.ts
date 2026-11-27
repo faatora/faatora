@@ -152,6 +152,19 @@ export interface As4SendResult {
   /** The AS4 messageId that was sent (echoed back on accept, present on reject/error for correlation). */
   readonly messageId: string;
   readonly errors?: ReadonlyArray<string>;
+  /**
+   * Partner ASP's own identifier for this submission, if the ASP
+   * returned one. Opaque to Faatora — kept for operator diagnostics
+   * and partner-support correlation (added 2026-11-27 as the
+   * `PartnerAspClient` HTTP body landed).
+   */
+  readonly aspReference?: string;
+  /**
+   * OTA's reference once the ASP forwards the message and OTA
+   * assigns a clearance id. Not every partner surfaces this on the
+   * initial response — may arrive only on the async callback path.
+   */
+  readonly otaReference?: string;
 }
 
 /* -------------------------------------------------------------------------- */
