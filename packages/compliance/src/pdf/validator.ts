@@ -33,13 +33,26 @@
  *      declare `/AFRelationship` ∈ {Source, Data, Alternative,
  *      Supplement, Unspecified}. This is the specifically PDF/A-3
  *      requirement that distinguishes it from PDF/A-2.
+ *   7. Every font resource used on a page is embedded. For each entry in
+ *      `/Resources /Font`:
+ *        - `/Type0` composite fonts: the first `/DescendantFonts` entry
+ *          must have a `/FontDescriptor` carrying a `/FontFile`,
+ *          `/FontFile2` or `/FontFile3` stream.
+ *        - `/TrueType` or `/Type1` fonts: must have a `/FontDescriptor`
+ *          with one of those same `/FontFile*` streams, OR, when they
+ *          have no `/FontDescriptor` at all, the `/BaseFont` must be an
+ *          exact match for one of the 14 standard PDF Type1 fonts.
+ *        - `/Type3` fonts: accepted. Their glyph programs live in the
+ *          `/CharProcs` streams inside the file, so a Type3 font is
+ *          embedded by construction and does not need a `/FontFile*`.
+ *   8. When an `/OutputIntents` entry carries a `/DestOutputProfile`
+ *      stream, that stream must begin with a syntactically valid ICC
+ *      header: 128 bytes long with the ASCII signature `acsp` at bytes
+ *      36..39. The named-sRGB form (identifier-only, no embedded
+ *      profile) still skips the ICC bytes entirely — it is the
+ *      PDF/A §6.2.2 shortcut and acceptable per ICC-registry practice.
  *
  * Deliberately NOT checked here (see README for the follow-up list):
- *   - Per-font embedding / subsetting. Chromium's print pipeline already
- *     embeds subsetted fonts, but asserting that at this depth requires
- *     walking every page's /Resources /Font tree. A regression there is
- *     caught by veraPDF; we accept the gap in the interest of a fast,
- *     dependency-free Node check.
  *   - Transparency groups, colour spaces per content stream, and
  *     ActualText coverage. These are PDF/A-2 concerns that veraPDF
  *     validates thoroughly.
@@ -87,6 +100,162 @@ const AF_RELATIONSHIPS: ReadonlySet<string> = new Set([
 
 /** Accepted PDF header strings. PDF/A-3 is 1.7 but we accept 1.4..1.7. */
 const ACCEPTED_HEADERS: ReadonlyArray<string> = ['%PDF-1.4', '%PDF-1.5', '%PDF-1.6', '%PDF-1.7'];
+
+/**
+ * The 14 standard PDF Type1 fonts. A /TrueType or /Type1 font whose
+ * /BaseFont is EXACTLY one of these (no subset prefix, no suffix) may
+ * be referenced without a /FontDescriptor; every PDF reader is required
+ * to provide them. Any other unembedded font is a conformance failure.
+ */
+const STANDARD_14_FONTS: ReadonlySet<string> = new Set([
+  'Courier',
+  'Courier-Bold',
+  'Courier-BoldOblique',
+  'Courier-Oblique',
+  'Helvetica',
+  'Helvetica-Bold',
+  'Helvetica-BoldOblique',
+  'Helvetica-Oblique',
+  'Times-Roman',
+  'Times-Bold',
+  'Times-BoldItalic',
+  'Times-Italic',
+  'Symbol',
+  'ZapfDingbats',
+]);
+
+/** Font /Subtype values we treat as "self-embedded" (Type3 uses /CharProcs). */
+const SELF_EMBEDDED_FONT_SUBTYPES: ReadonlySet<string> = new Set(['/Type3']);
+
+/**
+ * Pull a /Name's string value off a PDFObject, dropping the leading slash
+ * that PDFName.toString() emits. Returns `null` for anything that is not
+ * a /Name.
+ */
+function nameValue(obj: PDFObject | undefined): string | null {
+  if (!(obj instanceof PDFName)) {
+    return null;
+  }
+  return obj.toString().replace(/^\//, '');
+}
+
+/**
+ * Pull the `BaseFont` string off a font dictionary, with its subset
+ * prefix (`XXXXXX+`) intact. Returns `'<unknown>'` when absent so the
+ * error message is still readable.
+ */
+function baseFontName(fontDict: PDFDict): string {
+  return nameValue(fontDict.lookup(PDFName.of('BaseFont'))) ?? '<unknown>';
+}
+
+/**
+ * True IFF `fontDescriptor` carries at least one embedded font program
+ * stream (FontFile / FontFile2 / FontFile3). PDF/A-3 accepts any of the
+ * three — the differences are about which font format is in the stream.
+ */
+function fontDescriptorHasEmbeddedProgram(fontDescriptor: PDFDict): boolean {
+  for (const key of ['FontFile', 'FontFile2', 'FontFile3']) {
+    const ref = fontDescriptor.lookup(PDFName.of(key));
+    if (ref instanceof PDFStream) {
+      return true;
+    }
+    // When pdf-lib returns the indirect reference target it is already
+    // resolved; a raw PDFRef without a stream behind it means the
+    // descriptor points at a missing object, which we treat as "not
+    // embedded" — the subsequent error will still name the font.
+  }
+  return false;
+}
+
+/**
+ * Validate a single font dictionary. Pushes an error to `errors` when
+ * the font is not embedded, treating `/Type3` fonts and the 14 standard
+ * Type1 fonts as acceptable exceptions. Returns silently when the font
+ * is OK.
+ */
+function checkFontEmbedding(fontDict: PDFDict, errors: string[]): void {
+  const subtype = nameValue(fontDict.lookup(PDFName.of('Subtype')));
+  const baseFont = baseFontName(fontDict);
+
+  // Type3 fonts carry their glyph programs inline in /CharProcs streams
+  // — the font IS embedded by virtue of being a Type3. veraPDF treats
+  // them the same way.
+  if (subtype !== null && SELF_EMBEDDED_FONT_SUBTYPES.has(`/${subtype}`)) {
+    return;
+  }
+
+  // Composite Type0 fonts carry the glyph data on the descendant font's
+  // descriptor, not the Type0 dict itself.
+  if (subtype === 'Type0') {
+    const descendants = fontDict.lookup(PDFName.of('DescendantFonts'));
+    if (!(descendants instanceof PDFArray) || descendants.size() === 0) {
+      errors.push(`font "${baseFont}" is not embedded`);
+      return;
+    }
+    const descendant = descendants.lookup(0);
+    if (!(descendant instanceof PDFDict)) {
+      errors.push(`font "${baseFont}" is not embedded`);
+      return;
+    }
+    const descriptor = descendant.lookup(PDFName.of('FontDescriptor'));
+    if (!(descriptor instanceof PDFDict) || !fontDescriptorHasEmbeddedProgram(descriptor)) {
+      errors.push(`font "${baseFont}" is not embedded`);
+    }
+    return;
+  }
+
+  // Simple Type1 / TrueType — FontDescriptor on the font dict itself.
+  // MMType1 (multiple-master) is treated the same way.
+  if (subtype === 'TrueType' || subtype === 'Type1' || subtype === 'MMType1') {
+    const descriptor = fontDict.lookup(PDFName.of('FontDescriptor'));
+    if (descriptor instanceof PDFDict) {
+      if (!fontDescriptorHasEmbeddedProgram(descriptor)) {
+        errors.push(`font "${baseFont}" is not embedded`);
+      }
+      return;
+    }
+    // No FontDescriptor at all — allowed only for an exact match against
+    // one of the 14 standard Type1 fonts (no subset prefix, no suffix).
+    if (STANDARD_14_FONTS.has(baseFont)) {
+      return;
+    }
+    errors.push(`font "${baseFont}" is not embedded`);
+    return;
+  }
+
+  // Unknown subtype or missing one. Report the base font so the
+  // regression is traceable — a well-formed PDF always has a subtype.
+  errors.push(`font "${baseFont}" is not embedded`);
+}
+
+/**
+ * Validate the ICC bytes of a `/DestOutputProfile` stream against the
+ * minimum ICC v2/v4 header shape: at least 128 bytes, with the ASCII
+ * signature `acsp` at bytes 36..39. Returns an error string when the
+ * profile is malformed, or `null` when it passes the smoke test.
+ */
+function checkIccProfileBytes(iccBytes: Uint8Array): string | null {
+  if (iccBytes.length < 128) {
+    return 'OutputIntent DestOutputProfile is not a valid ICC profile (header is shorter than 128 bytes)';
+  }
+  // ICC profile signature is at offset 36 (ICC.1:2010-12 § 7.2.4).
+  const signature = String.fromCharCode(iccBytes[36], iccBytes[37], iccBytes[38], iccBytes[39]);
+  if (signature !== 'acsp') {
+    return 'OutputIntent DestOutputProfile is not a valid ICC profile (missing acsp signature)';
+  }
+  // Soft check: bytes 16..19 are the data colour space signature per
+  // ICC.1:2010 § 7.2.6. We log a debug line when it is not a known
+  // PDF/A one, but do NOT fail the validation — veraPDF is the final
+  // word on colour space correctness.
+  const colourSpace = String.fromCharCode(iccBytes[16], iccBytes[17], iccBytes[18], iccBytes[19]);
+  const known = new Set(['RGB ', 'CMYK', 'GRAY', 'LAB ']);
+  if (!known.has(colourSpace)) {
+    console.debug(
+      `validatePdfA3: unrecognised ICC profile data colour space ${JSON.stringify(colourSpace)}`,
+    );
+  }
+  return null;
+}
 
 /**
  * Read the first non-empty bytes of `pdfBytes` as ASCII and return them
@@ -316,9 +485,67 @@ export async function validatePdfA3(pdfBytes: Buffer): Promise<PdfA3ValidationRe
           '/OutputIntents entry with S=GTS_PDFA1 must declare an sRGB /OutputConditionIdentifier or a /DestOutputProfile ICC stream',
         );
       }
+
+      // Check 8 — ICC profile integrity. When the embedded-profile form
+      // is used, the first 128 bytes of the stream must look like an
+      // ICC header (`acsp` at offset 36). The named-sRGB form is left
+      // alone — PDF/A §6.2.2 lets us name the standard sRGB IEC
+      // 61966-2.1 condition without embedding its bytes.
+      if (haveIccStream) {
+        const iccBytes = readStreamBytes(destProfile);
+        if (!iccBytes) {
+          errors.push(
+            'OutputIntent DestOutputProfile is not a valid ICC profile (stream contents unreadable)',
+          );
+        } else {
+          const iccError = checkIccProfileBytes(iccBytes);
+          if (iccError !== null) {
+            errors.push(iccError);
+          }
+        }
+      }
     }
     if (!haveGtsPdfA1) {
       errors.push('/OutputIntents has no entry with S=GTS_PDFA1');
+    }
+  }
+
+  // Check 7 — every font used by a page is embedded.
+  //
+  // Walk every page's /Resources /Font dict and route each font through
+  // `checkFontEmbedding`, which handles Type0 descendants, simple
+  // TrueType / Type1 descriptors, the 14-standard-Type1 exception, and
+  // Type3 fonts (self-embedded via /CharProcs). Any font that is
+  // neither embedded nor one of the standard 14 is a conformance
+  // failure, reported once per distinct font so the list stays short.
+  const seenFontKeys = new Set<string>();
+  for (const page of doc.getPages()) {
+    const resources = page.node.Resources();
+    if (!resources) {
+      continue;
+    }
+    const fontDict = resources.lookup(PDFName.of('Font'));
+    if (!(fontDict instanceof PDFDict)) {
+      continue;
+    }
+    for (const key of fontDict.keys()) {
+      // Dedupe: two pages that share the same font object via an
+      // indirect reference should not generate two errors.
+      const ref = fontDict.get(key);
+      const dedupeKey = ref !== undefined ? ref.toString() : key.toString();
+      if (seenFontKeys.has(dedupeKey)) {
+        continue;
+      }
+      seenFontKeys.add(dedupeKey);
+
+      const font = fontDict.lookup(key);
+      if (!(font instanceof PDFDict)) {
+        // A non-dict under /Font is already malformed; skip it rather
+        // than surface a confusing "not embedded" error — the earlier
+        // structural checks will have flagged a bigger problem.
+        continue;
+      }
+      checkFontEmbedding(font, errors);
     }
   }
 
