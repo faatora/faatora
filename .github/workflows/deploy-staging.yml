@@ -322,6 +322,16 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_TF_STATE_REGION }}
 
+      # Terraform is needed in this job so the env-overlay step below can
+      # read `terraform output -json` for the `tf:` placeholders in
+      # infra/environments/staging.env.json. terraform_wrapper=false keeps
+      # the raw stdout from `terraform output` free of the action's
+      # `[terraform]` prefix so jq can parse it directly.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
       # Ensure the ECR repo exists before login tries to push to it.
       # The Terraform compute module does not currently create it.
       - name: Ensure ECR repository exists
@@ -410,6 +420,99 @@ jobs:
                    .registeredAt, .registeredBy)' \
             /tmp/task-def-current.json \
             > /tmp/task-def-new.json
+
+          # Apply the committed env-var overlay on top. This replaces the
+          # environment[] and secrets[] arrays on containerDefinitions[0]
+          # with the values in infra/environments/staging.env.json, with
+          # any `tf:<output>` placeholder resolved against
+          # `terraform output -json`. The Terraform compute module has
+          # `ignore_changes = [container_definitions]` on the task-def so
+          # it never fights this overlay. See
+          # docs/runbooks/prod-env-provisioning.md for how the overlay is
+          # maintained.
+          #
+          # Terraform init: the state was already initialised in the
+          # terraform-apply job that this job depends on, but each GitHub
+          # runner is ephemeral, so we initialise again here to produce a
+          # local .terraform/ for `terraform output` to read.
+          pushd infra >/dev/null
+          terraform init -reconfigure \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=staging/terraform.tfstate" \
+            -backend-config="region=${AWS_TF_STATE_REGION}" \
+            -backend-config="dynamodb_table=${TF_LOCK_TABLE}" \
+            >/dev/null
+          TF_OUT=$(terraform output -json)
+          popd >/dev/null
+
+          OVERLAY_FILE="infra/environments/staging.env.json"
+
+          # resolve() replaces a "tf:<name>" string with the value of
+          # that Terraform output; non-matching strings pass through.
+          # A missing output resolves to "" (so an env var becomes
+          # empty rather than failing register-task-definition).
+          RESOLVED_OVERLAY=$(jq -c \
+            --argjson tf "$TF_OUT" \
+            '
+              def resolve(v):
+                if (v | type) == "string" and (v | startswith("tf:")) then
+                  ($tf[v[3:]].value // "")
+                else v end;
+
+              { environment: ([.environment[]? | {name, value: (.value | resolve(.))}]),
+                secrets:     ([.secrets[]?     | {name, valueFrom: (.valueFrom | resolve(.))}]) }
+            ' \
+            "$OVERLAY_FILE")
+
+          jq \
+            --argjson overlay "$RESOLVED_OVERLAY" \
+            '.containerDefinitions[0].environment = $overlay.environment
+             | .containerDefinitions[0].secrets    = $overlay.secrets' \
+            /tmp/task-def-new.json \
+            > /tmp/task-def-with-env.json
+          mv /tmp/task-def-with-env.json /tmp/task-def-new.json
+
+          # DATABASE_URL assembly. The RDS AWS-managed master-user
+          # secret stores {username,password} JSON, NOT a postgres://
+          # URL, so the App's env.ts (which expects the URL shape) can't
+          # consume the secret ARN directly via ECS `secrets:`. Mirror
+          # the migrate job's logic here: pull the master secret, URL-
+          # encode the password, assemble the URL, and inject it as a
+          # plain env var that REPLACES the placeholder the overlay
+          # wrote. Everything is masked before the shell even sees it
+          # on the next line.
+          DB_ID="faatora-staging-pg"
+          DB_NAME="faatora"
+          ENDPOINT=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$AWS_TF_STATE_REGION" \
+            --query 'DBInstances[0].Endpoint.Address' \
+            --output text)
+          DB_SECRET_ARN=$(aws rds describe-db-instances \
+            --db-instance-identifier "$DB_ID" \
+            --region "$AWS_TF_STATE_REGION" \
+            --query 'DBInstances[0].MasterUserSecret.SecretArn' \
+            --output text)
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "$DB_SECRET_ARN" \
+            --region "$AWS_TF_STATE_REGION" \
+            --query SecretString \
+            --output text)
+          DB_USER=$(echo "$SECRET_JSON" | jq -r .username)
+          DB_PASS=$(echo "$SECRET_JSON" | jq -r .password)
+          DB_PASS_ENC=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=''))" "$DB_PASS")
+          DB_URL="postgres://${DB_USER}:${DB_PASS_ENC}@${ENDPOINT}:5432/${DB_NAME}?uselibpqcompat=true&sslmode=require"
+          echo "::add-mask::${DB_PASS}"
+          echo "::add-mask::${DB_PASS_ENC}"
+          echo "::add-mask::${DB_URL}"
+          jq \
+            --arg dburl "$DB_URL" \
+            '.containerDefinitions[0].environment |= map(
+               if .name == "DATABASE_URL" then .value = $dburl else . end
+             )' \
+            /tmp/task-def-new.json \
+            > /tmp/task-def-with-dburl.json
+          mv /tmp/task-def-with-dburl.json /tmp/task-def-new.json
 
           # Register and capture the new revision ARN for the next
           # step. Pass the request body as a file:// URL -- it's more

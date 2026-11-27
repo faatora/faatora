@@ -17,15 +17,36 @@ az_count     = 3
 db_multi_az  = true
 enable_infra = true
 
-# ClearTax §5.7 partner mTLS is ON in production. The sensitive inputs
-# (CA bundle S3 bucket/key, ACM cert ARN, partner CIDRs) are deliberately
-# NOT committed here — the deploy workflow applies with a second sealed
-# tfvars file (see docs/runbooks/cleartax-partner-access.md) that sets:
-#   cleartax_ca_bundle_s3_bucket = "..."
-#   cleartax_ca_bundle_s3_key    = "cleartax-ops-ca.pem"
-#   alb_cert_arn                 = "arn:aws:acm:eu-central-1:...:certificate/..."
-#   cleartax_partner_cidrs       = ["203.0.113.0/24", ...]
-# If any of those four is empty at plan time, the resource preconditions
-# in infra/modules/compute/mtls.tf fail the plan with an actionable
-# message rather than materialising a half-configured trust store.
-enable_cleartax_mtls = true
+# ClearTax §5.7 partner mTLS — OFF for now.
+#
+# Flip to true once ALL FOUR of the pieces below are in place:
+#   1. The ClearTax ops CA bundle PEM has been uploaded to a dedicated
+#      S3 bucket (ops-only, SSE-KMS, bucket policy restricting GetObject
+#      to the ALB service principal — see docs/runbooks/cleartax-partner-access.md).
+#   2. An ACM cert for the mTLS listener hostname has been issued in
+#      eu-central-1 and its ARN is known.
+#   3. ClearTax has sent the egress CIDRs for their partner-API clients
+#      (set in `cleartax_partner_cidrs`).
+#   4. The three CLEARTAX_PARTNER_* env vars in
+#      infra/environments/production.env.json have been filled in with the
+#      cert Subject CN, Issuer CN, and a comma-joined mirror of
+#      cleartax_partner_cidrs.
+#
+# The resource preconditions in infra/modules/compute/mtls.tf refuse plan
+# when enable_cleartax_mtls=true with any of the four variables below
+# empty, which is the right fail-safe: a half-configured trust store
+# would cheerfully accept any client cert signed by the empty CA list,
+# i.e. none, and the listener would return 495 to every partner call.
+#
+# Keeping this flag off until the sealed tfvars overlay is ready means
+# `terraform apply` on the production stack completes without touching
+# the mTLS resources; the API's ClearTaxPartnerGuard separately returns
+# 503 ("partner access not configured") until
+# CLEARTAX_PARTNER_CERT_SUBJECT_CN is non-empty, so the overall posture
+# is "refuse all partner traffic" rather than "accept it insecurely".
+enable_cleartax_mtls         = false
+cleartax_ca_bundle_s3_bucket = ""
+cleartax_ca_bundle_s3_key    = ""
+cleartax_partner_cidrs       = []
+# alb_cert_arn intentionally left to its "" default here — it is only
+# consumed when enable_cleartax_mtls=true.

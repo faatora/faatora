@@ -74,3 +74,46 @@ resource "aws_cognito_user_pool_client" "this" {
 
   supported_identity_providers = ["COGNITO"]
 }
+
+# ---------------------------------------------------------------------------
+# Cognito app client secret (Secrets Manager placeholder).
+#
+# The Cognito app client resource above is configured with
+# `generate_secret = false` because the web SPA and public mobile POS app
+# don't use SECRET_HASH. The accountant impersonation flow and the
+# server-side CognitoAuthService (see apps/api/src/modules/auth/) do
+# support SECRET_HASH when a client secret is present; when the operator
+# decides to move to a confidential-client posture they:
+#   1. Create (or switch to) a Cognito app client that has `generate_secret = true`.
+#   2. Copy the client secret from the Cognito console.
+#   3. Write it into the placeholder below via `aws secretsmanager put-secret-value`.
+#
+# Terraform owns the Secrets Manager resource (so IAM access patterns and
+# naming live in-repo and are reviewable) but NEVER owns the value. The
+# `lifecycle { ignore_changes = [secret_string] }` block on the version
+# resource makes every subsequent `terraform apply` leave the console-set
+# value alone — without it, apply would clobber the real secret back to
+# "PLACEHOLDER_SET_VIA_CONSOLE" on every run.
+#
+# Fail-safe: CognitoAuthService treats COGNITO_CLIENT_SECRET=="PLACEHOLDER_SET_VIA_CONSOLE"
+# as "no secret configured" and falls back to the no-SECRET_HASH path, so
+# the API boots and auth continues to work until the operator fills it in.
+# ---------------------------------------------------------------------------
+resource "aws_secretsmanager_secret" "cognito_client_secret" {
+  name        = "${local.name_prefix}-cognito-client-secret"
+  description = "Cognito app client secret. Operator fills via SM console after the app client is minted with generate_secret=true; see docs/runbooks/prod-env-provisioning.md."
+
+  tags = {
+    Name        = "${local.name_prefix}-cognito-client-secret"
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "cognito_client_secret_initial" {
+  secret_id     = aws_secretsmanager_secret.cognito_client_secret.id
+  secret_string = "PLACEHOLDER_SET_VIA_CONSOLE"
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
