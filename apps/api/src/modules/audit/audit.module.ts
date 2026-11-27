@@ -3,6 +3,7 @@ import { AuditService } from './audit.service';
 import { AuditSubscribers } from './audit.subscribers';
 import { AuditController } from './audit.controller';
 import { FirmsModule } from '../firms/firms.module';
+import { AuthModule } from '../../auth/auth.module';
 
 /**
  * EP5 Wave 2 (W2-E) — firm-scoped audit log.
@@ -13,9 +14,11 @@ import { FirmsModule } from '../firms/firms.module';
  * single read endpoint under FirmGuard; the viewer UI lands in Wave 3.
  *
  * Imports FirmsModule so FirmGuard resolves from the shared provider.
+ * Imports AuthModule for the ClearTaxPartnerGuard that protects the
+ * `GET /partners/cleartax/firms/:firmId/audit` partner read route.
  */
 @Module({
-  imports: [FirmsModule],
+  imports: [FirmsModule, AuthModule],
   controllers: [AuditController],
   providers: [AuditService, AuditSubscribers],
   exports: [AuditService],
