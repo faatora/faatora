@@ -1,12 +1,18 @@
 import { Module } from '@nestjs/common';
 import { PagerDutyController } from './pagerduty.controller';
 import { PagerDutyService } from '../../common/alerts/pagerduty.service';
+import { PlatformStatusService } from './platform-status.service';
 
 /**
  * AlertsModule — inbound + outbound PagerDuty wiring.
  *
  * - `PagerDutyController` receives V3 webhook deliveries at
- *   POST /api/webhooks/pagerduty.
+ *   POST /api/webhooks/pagerduty and hands each verified event to
+ *   `PlatformStatusService`.
+ * - `PlatformStatusService` projects those events into the
+ *   `platform_status_events` table (feeding the public status page)
+ *   and fans them out on EventEmitter2 under `platform.status.event`
+ *   so per-tenant status-board subscribers can react.
  * - `PagerDutyService` is the Events API v2 client; exported so
  *   other modules (incident reporters, canary alerter) can inject it
  *   and fire alerts outbound.
@@ -18,7 +24,7 @@ import { PagerDutyService } from '../../common/alerts/pagerduty.service';
  */
 @Module({
   controllers: [PagerDutyController],
-  providers: [PagerDutyService],
-  exports: [PagerDutyService],
+  providers: [PagerDutyService, PlatformStatusService],
+  exports: [PagerDutyService, PlatformStatusService],
 })
 export class AlertsModule {}
