@@ -42,14 +42,26 @@ import { WebhookEventsService } from './webhook-events.service';
         switch (choice) {
           case 'stripe': {
             if (!process.env.STRIPE_SECRET_KEY) {
-              if ((process.env.NODE_ENV ?? 'development') === 'production') {
+              const inProd = (process.env.NODE_ENV ?? 'development') === 'production';
+              const allowStub = process.env.ALLOW_STUB_BILLING_IN_PRODUCTION === '1';
+              if (inProd && !allowStub) {
                 throw new BillingProviderError(
-                  'STRIPE_SECRET_KEY must be set in production when BILLING_PROVIDER=stripe',
+                  'STRIPE_SECRET_KEY must be set in production when BILLING_PROVIDER=stripe. ' +
+                    'As a short-term escape hatch set ALLOW_STUB_BILLING_IN_PRODUCTION=1 to boot with a stub ' +
+                    'that throws on every billing call. Remove the escape hatch the moment real Stripe ' +
+                    'credentials are wired. Same pattern ALLOW_STUB_ASP_IN_PRODUCTION uses for clearance (PR #29).',
                 );
               }
-              log.warn(
-                'STRIPE_SECRET_KEY not set; FirmBillingModule is wired with a stub that throws on use',
-              );
+              if (inProd) {
+                log.warn(
+                  'ALLOW_STUB_BILLING_IN_PRODUCTION=1 — booting the Stripe stub under NODE_ENV=production. ' +
+                    'Billing API calls will throw. Clear this env var the moment real Stripe credentials land.',
+                );
+              } else {
+                log.warn(
+                  'STRIPE_SECRET_KEY not set; FirmBillingModule is wired with a stub that throws on use',
+                );
+              }
               return makeStubProvider('stripe');
             }
             log.log(
@@ -59,14 +71,23 @@ import { WebhookEventsService } from './webhook-events.service';
           }
           case 'paymob': {
             if (!process.env.PAYMOB_API_KEY) {
-              if ((process.env.NODE_ENV ?? 'development') === 'production') {
+              const inProd = (process.env.NODE_ENV ?? 'development') === 'production';
+              const allowStub = process.env.ALLOW_STUB_BILLING_IN_PRODUCTION === '1';
+              if (inProd && !allowStub) {
                 throw new BillingProviderError(
-                  'PAYMOB_API_KEY must be set in production when BILLING_PROVIDER=paymob',
+                  'PAYMOB_API_KEY must be set in production when BILLING_PROVIDER=paymob. ' +
+                    'As a short-term escape hatch set ALLOW_STUB_BILLING_IN_PRODUCTION=1.',
                 );
               }
-              log.warn(
-                'PAYMOB_API_KEY not set; FirmBillingModule is wired with a stub that throws on use',
-              );
+              if (inProd) {
+                log.warn(
+                  'ALLOW_STUB_BILLING_IN_PRODUCTION=1 — booting the Paymob stub under NODE_ENV=production.',
+                );
+              } else {
+                log.warn(
+                  'PAYMOB_API_KEY not set; FirmBillingModule is wired with a stub that throws on use',
+                );
+              }
               return makeStubProvider('paymob');
             }
             log.log(
