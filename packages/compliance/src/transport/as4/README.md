@@ -9,7 +9,10 @@ paths live side by side:
   original §5.7 subcontractor arrangement: Faatora hands envelope +
   UBL to an accredited OpenPeppol service provider who signs and
   transmits under their production X.509 certificate. Still the
-  default production pathway.
+  default production pathway. The HTTP layer ships a real JSON
+  wire protocol by default (`JsonWireProtocol`) with field-name
+  overrides for per-vendor quirks; see the "Partner-ASP HTTP wire
+  protocol" section below.
 - **Direct path** (`adapters/direct.ts`) — Faatora composes envelope,
   XAdES-BES signature, SOAP envelope and multipart body itself, and
   POSTs directly to C3 over mTLS. This is the pathway exercised for
@@ -257,3 +260,63 @@ const sender: As4Sender = new DirectAs4Sender({
 
 For tests, keep using `MockAs4Sender` — it is still the baseline
 every real adapter is held against.
+
+## Partner-ASP HTTP wire protocol
+
+The partner-ASP adapter sits behind a tiny `WireProtocol` interface so
+partner-specific contract quirks stay contained:
+
+```ts
+export interface WireProtocol {
+  buildRequest(message: As4OutboundMessage, ctx: WireRequestContext): WireRequest;
+  parseResponse(response: Response, message: As4OutboundMessage): Promise<As4SendResult>;
+}
+```
+
+The default implementation, `JsonWireProtocol`, uses the most common
+REST contract we see across the public specs of Peppol service
+providers (Pagero, Avalara, Sovos, ClearTax Global):
+
+- `POST {baseUrl}/documents/outbound`
+- `Authorization: Bearer <apiKey>` (or `X-Api-Key` via `authMode: 'x-api-key'`)
+- JSON body with the typed envelope fields and a base64-encoded UBL
+  payload. Document type id is serialized both as a structured object
+  (`scheme`, `rootNs`, `localName`, `customizationId`, `ublVersion`)
+  **and** as the canonical Peppol wire string (`value`), so a partner
+  whose API wants either form works without a wire-field override.
+- JSON response with `status: 'accepted'|'rejected'`, `messageId`,
+  optional `aspReference` and `otaReference`, and an `errors` array
+  for failed validations.
+
+### When the partner spec arrives
+
+The constructor of `JsonWireProtocol` accepts three override shapes:
+
+```ts
+new JsonWireProtocol({
+  path: '/v2/peppol/send',                // non-default endpoint path
+  authMode: 'x-api-key',                   // auth header style
+  requestFields: { messageId: 'docId' },   // rename outbound fields
+  responseFields: {                        // rename inbound fields
+    messageId: 'documentId',
+    aspReference: 'clearTaxRef',
+    otaReference: 'taxAuthorityRef',
+    status: 'state',
+  },
+});
+```
+
+If the partner's shape differs materially (e.g. multipart envelope,
+SOAP body, OAuth2 refresh), implement the full `WireProtocol`
+interface and pass it to `new PartnerAspClient({ wireProtocol: … })`.
+The retry classification contract (5xx + network errors are
+retryable; 4xx and 2xx `status: 'rejected'` are terminal) stays
+fixed across any wire override.
+
+### Status
+
+The default field names are a reasonable prior. They are **not** yet
+pinned to ClearTax's final §5.7 integration spec (gated on Hiba's
+reply). When the spec arrives, the update is usually a single
+`new JsonWireProtocol({ ... })` call at DI wiring time plus a diff to
+the two expectation values inside `partner-asp-client.spec.ts`.
