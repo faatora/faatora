@@ -86,38 +86,76 @@ hash values will fit without a format break.
 `decodeInvoiceQrTlv()` is exported symmetrically for verifier round
 trips and is covered by unit tests.
 
-## PDF/A-3 conformance — status: TODO
+## PDF/A-3 conformance
 
-`renderPdfA3` returns `pdfA3Conformant: false` at EP4 and will keep
-returning `false` until a conformance step is added. What the renderer
-DOES do today:
+`renderPdfA3` runs a structural PDF/A-3 validator
+(`validator.ts` / {@link validatePdfA3}) on the finished PDF before
+returning, and sets `pdfA3Conformant` from the validator's result.
+Callers never have to run the validator by hand.
+
+The validator opens the finished PDF with `pdf-lib` and asserts six
+invariants. Each failed check adds one entry to
+`conformanceErrors`; `pdfA3Conformant` is `true` IFF every check
+passed, and `conformanceLevel` is the `pdfaid:conformance` value
+found on the XMP packet.
+
+1. **PDF header is 1.4..1.7.** PDF/A-3 is based on PDF 1.7 and most
+   writers emit anything from 1.4 through 1.7; PDF 2.0+ is rejected.
+2. **Trailer carries an `/ID` entry.** Required for stable archive
+   indexing and for any downstream signer that needs a document
+   identifier.
+3. **Catalog `/Metadata` points at an XMP stream.** The stream may be
+   raw or `/FlateDecode`-compressed.
+4. **The XMP packet carries the `pdfaid` namespace** with
+   `pdfaid:part = 3` and `pdfaid:conformance ∈ {A, B, U}`. The renderer
+   emits level **B** because we do not produce a tagged PDF —
+   claiming A or U would be a false claim.
+5. **At least one `/OutputIntents` entry has `S = GTS_PDFA1`** with
+   either `OutputConditionIdentifier` containing `sRGB`
+   (case-insensitive) or a `/DestOutputProfile` ICC stream. The
+   renderer uses the identifier-only sRGB form permitted by PDF/A §6.2.2.
+6. **`/AF` associated-files + per-filespec `/AFRelationship`.** When an
+   `EmbeddedFiles` tree is present, the Catalog must have an `/AF`
+   array and every filespec dictionary must declare `/AFRelationship`
+   ∈ {Source, Data, Alternative, Supplement, Unspecified}. This is the
+   specifically PDF/A-3 requirement that distinguishes it from PDF/A-2.
+
+What the renderer DOES on top of these:
 
 - Embeds the UBL XML with `/Type /Filespec`, `/AFRelationship /Source`,
-  and registers it on the Catalog's `/AF` array (the ZUGFeRD /
-  Factur-X pattern that PDF/A-3 requires for associated files).
+  and on the Catalog's `/AF` array (the ZUGFeRD / Factur-X pattern).
+- Writes a PDF/A-3B XMP packet into the Catalog's `/Metadata` stream
+  with Dublin Core + XMP Basic + `pdfaid` namespaces.
+- Writes the `GTS_PDFA1` OutputIntent with the sRGB identifier.
+- Writes a deterministic trailer `/ID` derived from
+  `(invoiceNumber, issueTimestamp)`.
 - Sets `/Title`, `/Author`, `/Subject`, `/Creator`, `/CreationDate`.
 
-What is MISSING for ISO 19005-3 conformance:
+### Known limitations of the validator
 
-- **OutputIntent + ICC profile** — a PDF/A file must declare a device
-  colour space via an `OutputIntents` entry with an embedded ICC
-  profile (typically sRGB IEC61966-2.1). `pdf-lib` 1.17 does not
-  produce this by default.
-- **XMP metadata packet** — Info-dictionary fields must be mirrored
-  into an XMP metadata stream with the PDF/A-3 conformance claim
-  (`pdfaid:conformance = A/B/U`).
-- **Font subsetting with embedded fonts** — any text must be rendered
-  with embedded, subsettable fonts. Chromium already subsets its print
-  fonts; we have not yet verified every glyph on an Arabic-heavy
-  page comes out embedded.
-- **No encryption, no transparency groups, no JavaScript** — Chromium
-  print output should already satisfy these but we have not asserted.
+The structural validator is the first gate, not the only one. veraPDF
+should continue to run as a sidecar before an archive is sealed, because
+these follow-ups are deliberately out of scope here:
 
-The intended path is a **veraPDF** post-processing step: either a
-sidecar Java process (`verapdf --flavour 3b <file.pdf>`) or the
-in-development `verapdf-js` port. Validation PASSES flip the renderer's
-`pdfA3Conformant` flag to `true`; FAILURES keep it `false` and are
-logged in the validation step.
+- **Font embedding / subsetting** is NOT checked. Walking every page's
+  `/Resources /Font` tree and asserting a `/FontFile{,2,3}` on each
+  descriptor is possible, but hasn't earned its keep yet: Chromium's
+  print pipeline embeds subsetted fonts already, and a regression
+  there is caught by veraPDF. Follow-up task.
+- **Transparency groups, colour spaces per content stream, ActualText
+  coverage** — PDF/A-2 concerns that veraPDF validates thoroughly and
+  that we do not re-implement.
+- **ICC profile well-formedness.** The validator accepts any
+  `/DestOutputProfile` stream as valid; veraPDF parses the actual
+  ICC bytes and rejects malformed profiles.
+
+### The validator is the writer's spec
+
+The validator and the renderer are co-designed. When a new field is
+required for OTA conformance, add the check to the validator first and
+then satisfy it in the renderer. The renderer tests assert
+`pdfA3Conformant === true` on every render, so a regression on either
+side fails fast.
 
 ## Deployment notes (Ahmed, this is what breaks in prod)
 
@@ -137,9 +175,11 @@ logged in the validation step.
 - **Sandbox** — the renderer passes `--no-sandbox` to Chromium so it
   works in rootful containers. Keep the container non-root in prod
   and drop this flag if the host already provides a user namespace.
-- **veraPDF** — until the validation step is wired in, DO NOT claim
-  PDF/A-3 conformance to customers. The output is a signable,
-  attachment-carrying PDF; it is not yet a certified archival PDF.
+- **veraPDF** — the in-process validator covers the six structural
+  checks listed above and flips `pdfA3Conformant` accordingly. Keep
+  veraPDF scheduled as a sidecar before an archive is sealed: font
+  embedding, ICC profile integrity and transparency rules are still
+  out of scope for the in-process check and veraPDF catches them.
 
 ## Known limitations
 
