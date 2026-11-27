@@ -564,11 +564,107 @@ jobs:
             --region "$AWS_TF_STATE_REGION"
 
       - name: Wait for service stable
+        id: wait-service
         run: |
           aws ecs wait services-stable \
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_SERVICE" \
             --region "$AWS_TF_STATE_REGION"
+
+      # Service-stable failures (failedTasks ticking up on the rolling
+      # deployment, tasks never passing the ALB target-group probe,
+      # ResourceInitializationError on `secrets:[].valueFrom`, missing
+      # env vars at boot, ...) are invisible from the exit code of
+      # `aws ecs wait` alone -- the step just times out after 10 minutes
+      # with no detail. This dumps three complementary slices so the
+      # next engineer on-call has the real cause in the Actions log
+      # without opening the console:
+      #   1. last ~10 service events -- "service X was unable to place
+      #      a task because ...", "service X has reached a steady state"
+      #      and the ResourceInitializationError lines land here.
+      #   2. recently stopped tasks -- stoppedReason, stopCode and each
+      #      container's exitCode + reason. This surfaces exec-role SM
+      #      failures, image-pull errors, and non-zero app exits.
+      #   3. last 15 min of the app's CloudWatch log group -- captures
+      #      the API boot log (NestFactory lines, pino 'listening on
+      #      :3000', Sentry init) and any stack trace the app emitted
+      #      before dying.
+      # continue-on-error so a diagnostic failure (log group doesn't
+      # exist yet, describe-tasks times out, ...) does NOT eclipse the
+      # real `aws ecs wait` failure above -- the job still exits with
+      # the wait step's failure status.
+      - name: Dump ECS service diagnostics on failure
+        id: diag-service-stable
+        if: failure() && steps.wait-service.outcome == 'failure'
+        continue-on-error: true
+        run: |
+          set +e
+          echo "::group::Last 10 ECS service events ($ECS_SERVICE)"
+          aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_TF_STATE_REGION" \
+            --query 'services[0].events[:10]' \
+            --output json
+          echo "::endgroup::"
+
+          echo "::group::Recently stopped tasks"
+          STOPPED_ARNS=$(aws ecs list-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --service-name "$ECS_SERVICE" \
+            --desired-status STOPPED \
+            --region "$AWS_TF_STATE_REGION" \
+            --max-items 5 \
+            --query 'taskArns' \
+            --output text)
+          if [ -n "$STOPPED_ARNS" ] && [ "$STOPPED_ARNS" != "None" ]; then
+            # list-tasks pagination token sneaks in as a trailing field
+            # on --output text; strip it so describe-tasks does not get
+            # handed garbage.
+            STOPPED_ARNS=$(echo "$STOPPED_ARNS" | tr '\t' '\n' | grep -E '^arn:' || true)
+            if [ -n "$STOPPED_ARNS" ]; then
+              aws ecs describe-tasks \
+                --cluster "$ECS_CLUSTER" \
+                --tasks $STOPPED_ARNS \
+                --region "$AWS_TF_STATE_REGION" \
+                --query 'tasks[].{stoppedReason:stoppedReason, stopCode:stopCode, taskArn:taskArn, containers:containers[].{name:name, exitCode:exitCode, reason:reason}}' \
+                --output json
+              # Latest stopped task ARN for the log-tail step's stream lookup.
+              LATEST_STOPPED=$(echo "$STOPPED_ARNS" | head -n1)
+              echo "latest_stopped=$LATEST_STOPPED" >> "$GITHUB_OUTPUT"
+            else
+              echo "(no stopped task ARNs after filtering)"
+            fi
+          else
+            echo "(no stopped tasks returned by list-tasks)"
+          fi
+          echo "::endgroup::"
+
+          # Log group name is stable: the compute module defines it as
+          # `/ecs/${project}-${environment}-app`. Fall back to a `logs
+          # describe-log-groups` lookup if the hard-coded guess ever
+          # drifts.
+          LOG_GROUP="/ecs/faatora-staging-app"
+          if ! aws logs describe-log-groups \
+                --log-group-name-prefix "$LOG_GROUP" \
+                --region "$AWS_TF_STATE_REGION" \
+                --query 'logGroups[0].logGroupName' \
+                --output text 2>/dev/null | grep -q "$LOG_GROUP"; then
+            DISCOVERED=$(aws logs describe-log-groups \
+              --log-group-name-prefix "/ecs/faatora-staging" \
+              --region "$AWS_TF_STATE_REGION" \
+              --query 'logGroups[0].logGroupName' \
+              --output text 2>/dev/null || echo "")
+            if [ -n "$DISCOVERED" ] && [ "$DISCOVERED" != "None" ]; then
+              LOG_GROUP="$DISCOVERED"
+            fi
+          fi
+          echo "::group::App CloudWatch logs (last 15m, $LOG_GROUP)"
+          aws logs tail "$LOG_GROUP" \
+            --region "$AWS_TF_STATE_REGION" \
+            --since 15m \
+            || echo "(no log events; log group may not exist yet or task never wrote)"
+          echo "::endgroup::"
 
   smoke-test:
     name: Smoke test API over the ALB
