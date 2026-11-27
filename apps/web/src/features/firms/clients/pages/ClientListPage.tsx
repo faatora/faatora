@@ -4,15 +4,32 @@
 // for engagement-type and revocation status. Actions wire to:
 //   - revoke (DELETE /firms/:id/clients/:tenantId)
 //   - open onboarding wizard
-//   - impersonate "act as this client" (deferred -- see TODO below).
+//   - impersonate "act as this client" — writes the tenant id into
+//     FirmContext, which surfaces it as x-impersonate-tenant-id on every
+//     subsequent API call. Backend enforcement is a follow-up (see the
+//     startImpersonation TODO in ../api/clients.ts).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listClients, revokeClient } from '../api/clients';
-import type { FirmClientTenant } from '../../types';
+import { useNavigate } from 'react-router-dom';
+import { listClients, revokeClient, startImpersonation } from '../api/clients';
+import { useFirmContext } from '../../context/FirmContext';
+import type { FirmClientTenant, FirmMemberRole } from '../../types';
 
 type StatusFilter = 'all' | 'active' | 'revoked';
 type EngagementFilter = 'all' | 'ongoing' | 'periodic';
+
+/**
+ * Roles allowed to "act as" a client tenant. `read_only` is deliberately
+ * excluded — a reviewer who cannot write to the firm should not be able
+ * to post invoices under a client's name either. The backend follow-up
+ * mirrors this check for defence in depth.
+ */
+const IMPERSONATE_ALLOWED_ROLES: ReadonlySet<FirmMemberRole> = new Set([
+  'owner',
+  'partner',
+  'staff',
+]);
 
 export interface ClientListPageProps {
   firmId: string;
@@ -22,11 +39,21 @@ export interface ClientListPageProps {
 
 export function ClientListPage(props: ClientListPageProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { firmList, startActingAs } = useFirmContext();
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [rows, setRows] = useState<FirmClientTenant[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [engagementFilter, setEngagementFilter] = useState<EngagementFilter>('all');
   const [busyRevokeId, setBusyRevokeId] = useState<string | null>(null);
+  const [busyActAsId, setBusyActAsId] = useState<string | null>(null);
+
+  const myRole = useMemo<FirmMemberRole | null>(() => {
+    const membership = firmList.find((m) => m.firm.id === props.firmId);
+    return membership?.role ?? null;
+  }, [firmList, props.firmId]);
+
+  const canImpersonate = myRole != null && IMPERSONATE_ALLOWED_ROLES.has(myRole);
 
   const reload = useCallback(async () => {
     setState('loading');
@@ -62,6 +89,23 @@ export function ClientListPage(props: ClientListPageProps) {
       await reload();
     } finally {
       setBusyRevokeId(null);
+    }
+  };
+
+  const onActAs = async (tenantId: string) => {
+    if (!canImpersonate || busyActAsId) return;
+    setBusyActAsId(tenantId);
+    try {
+      // Fire-and-shrug: if the backend endpoint exists, it returns a
+      // ticket; if not, startImpersonation swallows the 404 so the UX
+      // stays usable while the server-side piece lands in the next PR.
+      await startImpersonation(props.firmId, tenantId).catch(() => {
+        /* already-logged; proceed with frontend-only impersonation */
+      });
+      startActingAs(tenantId);
+      navigate('/');
+    } finally {
+      setBusyActAsId(null);
     }
   };
 
@@ -159,12 +203,22 @@ export function ClientListPage(props: ClientListPageProps) {
                         >
                           {t('clients.list.action.viewInvoices')}
                         </button>
-                        {/*
-                         * TODO(W2-A): wire "act as this client" once
-                         * FirmContext exposes a per-client tenant switch.
-                         * Until then this button is omitted so it does
-                         * not misrepresent the current capability.
-                         */}
+                        <button
+                          type="button"
+                          onClick={() => void onActAs(r.tenantId)}
+                          disabled={!canImpersonate || busyActAsId === r.tenantId}
+                          title={
+                            canImpersonate
+                              ? t('clients.actAsTooltip')
+                              : t('clients.actAsNoPermission')
+                          }
+                          aria-label={t('clients.actAsFor', { client: r.tenantName })}
+                          className="ps-3 pe-3 py-1.5 rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-medium hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                        >
+                          {busyActAsId === r.tenantId
+                            ? t('clients.actAsStarting')
+                            : t('clients.actAs')}
+                        </button>
                         <button
                           type="button"
                           onClick={() => void onRevoke(r.tenantId)}

@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ACTIVE_FIRM_STORAGE_KEY,
+  ACTIVE_TENANT_STORAGE_KEY,
+  IMPERSONATE_TENANT_STORAGE_KEY,
   apiGet,
   apiPost,
   buildDefaultHeaders,
   getActiveFirmId,
+  isTokenExpired,
   setActiveFirmId,
+  setActiveTenantId,
+  setImpersonateTenantId,
   UnauthorizedError,
 } from './api';
 
@@ -85,5 +90,40 @@ describe('shared api client', () => {
   it('buildDefaultHeaders only contains correlation id for anonymous SME user', () => {
     const headers = buildDefaultHeaders();
     expect(Object.keys(headers)).toEqual(['x-correlation-id']);
+  });
+
+  it('injects x-tenant-id when a tenant is selected (shop-owner path)', async () => {
+    setActiveTenantId('tenant-55');
+    const spy = mockFetchOnce({ body: { ok: true } });
+    await apiGet('/anywhere');
+    const headers = spy.mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers['x-tenant-id']).toBe('tenant-55');
+    setActiveTenantId(null);
+    expect(localStorage.getItem(ACTIVE_TENANT_STORAGE_KEY)).toBeNull();
+  });
+
+  it('injects x-impersonate-tenant-id when impersonation is active', async () => {
+    setImpersonateTenantId('client-tenant-9');
+    const spy = mockFetchOnce({ body: { ok: true } });
+    await apiGet('/anywhere');
+    const headers = spy.mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers['x-impersonate-tenant-id']).toBe('client-tenant-9');
+    setImpersonateTenantId(null);
+    expect(localStorage.getItem(IMPERSONATE_TENANT_STORAGE_KEY)).toBeNull();
+  });
+
+  it('isTokenExpired recognises an expired JWT', () => {
+    const expiredJwt = `${btoa(JSON.stringify({ alg: 'none' }))}.${btoa(JSON.stringify({ exp: 1 }))}.`;
+    expect(isTokenExpired(expiredJwt)).toBe(true);
+  });
+
+  it('isTokenExpired returns false for a non-JWT opaque token', () => {
+    expect(isTokenExpired('opaque-cognito-token')).toBe(false);
+  });
+
+  it('isTokenExpired returns false for a JWT with a future exp', () => {
+    const future = Math.floor(Date.now() / 1000) + 3600;
+    const jwt = `${btoa(JSON.stringify({ alg: 'none' }))}.${btoa(JSON.stringify({ exp: future }))}.`;
+    expect(isTokenExpired(jwt)).toBe(false);
   });
 });

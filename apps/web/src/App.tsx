@@ -5,9 +5,11 @@ import { DirectionProvider } from './components/DirectionProvider';
 import { LanguageToggle } from './components/LanguageToggle';
 import { CheckerPage } from './pages/checker/CheckerPage';
 import { PosPage } from './pages/pos/PosPage';
+import { PosLoginPage } from './pages/pos/LoginPage';
 import { AccountantPage } from './pages/accountant/AccountantPage';
 import { FirmContextProvider, useFirmContext } from './features/firms/context/FirmContext';
 import { FirmSwitcher } from './features/firms/components/FirmSwitcher';
+import { ImpersonationBanner } from './features/firms/components/ImpersonationBanner';
 import { FirmBootstrapPage } from './features/firms/pages/FirmBootstrapPage';
 import { FirmMembersPage } from './features/firms/pages/FirmMembersPage';
 import { AcceptInvitationPage } from './features/firms/pages/AcceptInvitationPage';
@@ -50,22 +52,38 @@ function AppRoutes() {
     return <LegacyRouter />;
   }
 
+  // The POS pages render their own full-bleed shell (tablet-first) and
+  // have no use for the firm chrome, so they bypass the header + max-w-4xl
+  // wrapper the accountant console sits inside.
+  const isPosPath = location.pathname === '/pos' || location.pathname.startsWith('/pos/');
+  if (isPosPath) {
+    return (
+      <Routes>
+        <Route path="/pos" element={<PosPage />} />
+        <Route path="/pos/login" element={<PosLoginPage />} />
+      </Routes>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <div className="mx-auto max-w-4xl px-6 py-10">
-        <AppHeader />
-        <div className="mt-8">
-          <Routes>
-            <Route path="/firms/new" element={<FirmBootstrapPage />} />
-            <Route path="/firms/invitations/accept" element={<AcceptInvitationPage />} />
-            <Route path="/firms/:id/members" element={<FirmMembersPage />} />
-            <Route path="/firms/:id/dashboard" element={<DashboardPage />} />
-            <Route path="/firms/:id/imports" element={<ImportWizardPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+    <>
+      <ImpersonationBanner />
+      <main className="min-h-screen bg-slate-50 font-sans text-slate-900">
+        <div className="mx-auto max-w-4xl px-6 py-10">
+          <AppHeader />
+          <div className="mt-8">
+            <Routes>
+              <Route path="/firms/new" element={<FirmBootstrapPage />} />
+              <Route path="/firms/invitations/accept" element={<AcceptInvitationPage />} />
+              <Route path="/firms/:id/members" element={<FirmMembersPage />} />
+              <Route path="/firms/:id/dashboard" element={<DashboardPage />} />
+              <Route path="/firms/:id/imports" element={<ImportWizardPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
 
