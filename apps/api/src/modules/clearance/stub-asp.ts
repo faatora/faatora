@@ -66,7 +66,35 @@ export class StubAspProvider implements TransmissionProvider {
   //
   // Tests that construct this class bypassing DI pass a stub instead of
   // null; see `apps/api/test/clearance.spec.ts`.
-  constructor(private readonly moduleRef: ModuleRef) {}
+  constructor(private readonly moduleRef: ModuleRef) {
+    // Prod-boot guard. StubAspProvider deliberately fabricates OTA
+    // clearance results — it has no link to the real OTA, and rows it
+    // produces look cleared when they are not. Treat booting the stub
+    // under NODE_ENV=production as a deployment misconfiguration and
+    // refuse to come up, mirroring the KmsSigner / SigningModule
+    // "hard-refusal" pattern (see signing.module.ts). Setting
+    // `ALLOW_STUB_ASP_IN_PRODUCTION=1` is the explicit escape hatch
+    // for the short window in prod where we have the KMS signer live
+    // but the partner ASP credentials are still landing — the operator
+    // has to opt in and the boot log is loud about it.
+    const nodeEnv = process.env.NODE_ENV ?? 'development';
+    if (nodeEnv === 'production') {
+      if (process.env.ALLOW_STUB_ASP_IN_PRODUCTION !== '1') {
+        throw new Error(
+          'StubAspProvider: refusing to boot under NODE_ENV=production. ' +
+            'The stub fabricates OTA clearance verdicts and MUST NOT run in prod. ' +
+            'Wire a real TransmissionProvider (see clearance.module.ts) or, as a ' +
+            'temporary escape hatch during the partner-ASP rollout, set ' +
+            'ALLOW_STUB_ASP_IN_PRODUCTION=1.',
+        );
+      }
+      this.log.warn(
+        'StubAspProvider is running under NODE_ENV=production because ' +
+          'ALLOW_STUB_ASP_IN_PRODUCTION=1 is set. Clearance verdicts are FABRICATED. ' +
+          'Clear this env var the moment the real TransmissionProvider is wired.',
+      );
+    }
+  }
 
   /**
    * Install a callback sink directly, bypassing ModuleRef. Intended ONLY
