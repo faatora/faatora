@@ -62,6 +62,13 @@ export interface ListAuditEventsOptions {
   limit?: number;
   since?: Date;
   eventType?: string;
+  /**
+   * Optional tenant scope. When set, the list is filtered to events for
+   * that specific tenant (NULL tenant_id rows — firm-level events — are
+   * excluded). Used by the ClearTax partner read route to narrow an
+   * inspection to one tenant without exposing the rest of the firm.
+   */
+  tenantId?: string;
 }
 
 /**
@@ -260,6 +267,12 @@ export class AuditService {
       }
       if (opts.eventType) {
         filters.push(eq(firmAuditEvents.eventType, opts.eventType));
+      }
+      if (opts.tenantId) {
+        // Non-null tenant scope only — firm-level rows (tenant_id IS NULL)
+        // are excluded so an inspector narrowing to one tenant does not
+        // see any firm-wide events. See ListAuditEventsOptions.tenantId.
+        filters.push(eq(firmAuditEvents.tenantId, opts.tenantId));
       }
       const rows = await tx
         .select()
