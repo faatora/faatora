@@ -40,3 +40,45 @@ variable "db_multi_az" {
   description = "Enable multi-AZ for the primary RDS instance."
   default     = true
 }
+
+# ---------------------------------------------------------------
+# ClearTax §5.7 partner mTLS. Wired straight through to module.compute;
+# see infra/modules/compute/mtls.tf and
+# docs/runbooks/cleartax-partner-access.md.
+# ---------------------------------------------------------------
+
+variable "enable_cleartax_mtls" {
+  type        = bool
+  description = "Provision the ALB mTLS listener + trust store for ClearTax §5.7 partner access. Staging stays false until the CA bundle is uploaded; production ships true, and the four supporting vars below must be supplied at apply time (via a sealed tfvars file or -var) — resource preconditions fail plan otherwise."
+  default     = false
+}
+
+variable "cleartax_ca_bundle_s3_bucket" {
+  type        = string
+  description = "S3 bucket holding the ClearTax ops CA PEM bundle (required when enable_cleartax_mtls=true). Not committed to env tfvars — supplied at apply time."
+  default     = ""
+}
+
+variable "cleartax_ca_bundle_s3_key" {
+  type        = string
+  description = "S3 key of the CA bundle (required when enable_cleartax_mtls=true). Not committed to env tfvars — supplied at apply time."
+  default     = ""
+}
+
+variable "cleartax_mtls_port" {
+  type        = number
+  description = "Listener port for the mTLS partner endpoint. Defaults to 8443."
+  default     = 8443
+}
+
+variable "cleartax_partner_cidrs" {
+  type        = list(string)
+  description = "Source CIDRs permitted to reach the mTLS listener. Must match CLEARTAX_PARTNER_IP_ALLOWLIST at the app layer. Empty list refuses plan when enable_cleartax_mtls=true."
+  default     = []
+}
+
+variable "alb_cert_arn" {
+  type        = string
+  description = "ACM cert ARN used by the mTLS listener's server-side TLS (required when enable_cleartax_mtls=true). Not committed to env tfvars — supplied at apply time."
+  default     = ""
+}

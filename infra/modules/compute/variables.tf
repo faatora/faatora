@@ -104,3 +104,44 @@ variable "migrate_image_tag" {
   description = "Image tag on the ECR repo that the migrate task resolves to at run time. 'staging' is the moving tag the deploy-image job always updates; pin to a sha for repeatable runs."
   default     = "staging"
 }
+
+# ---------------------------------------------------------------
+# ClearTax §5.7 partner mTLS (see mtls.tf and
+# docs/runbooks/cleartax-partner-access.md).
+# ---------------------------------------------------------------
+
+variable "enable_cleartax_mtls" {
+  type        = bool
+  description = "Set to true to provision the mTLS listener + trust store for ClearTax §5.7 partner access. When true, cleartax_ca_bundle_s3_bucket/key, alb_cert_arn and cleartax_partner_cidrs must all be set — resource preconditions fail plan otherwise."
+  default     = false
+}
+
+variable "cleartax_ca_bundle_s3_bucket" {
+  type        = string
+  description = "S3 bucket holding the concatenated PEM CA bundle for the ClearTax ops CA (required when enable_cleartax_mtls=true). The ALB Trust Store syncs from s3://<bucket>/<key>."
+  default     = ""
+}
+
+variable "cleartax_ca_bundle_s3_key" {
+  type        = string
+  description = "S3 key of the CA bundle (required when enable_cleartax_mtls=true). Rotation: upload a new PEM to the same key; the trust store refreshes within ~15 min."
+  default     = ""
+}
+
+variable "cleartax_mtls_port" {
+  type        = number
+  description = "Listener port for the mTLS partner endpoint. Kept off 443 because mTLS applies to the whole listener and would block all unauthenticated public traffic. Defaults to 8443."
+  default     = 8443
+}
+
+variable "cleartax_partner_cidrs" {
+  type        = list(string)
+  description = "Source CIDRs permitted to reach the mTLS listener. Should match CLEARTAX_PARTNER_IP_ALLOWLIST at the app layer; defense in depth. Empty list = refuses to apply when enable_cleartax_mtls=true (see mtls.tf precondition)."
+  default     = []
+}
+
+variable "alb_cert_arn" {
+  type        = string
+  description = "ACM cert ARN for the mTLS listener's server-side TLS. Required when enable_cleartax_mtls=true. Can reuse the same cert the public 443 listener will carry — the mTLS listener only differs in the mutual_authentication block and the dedicated SG."
+  default     = ""
+}

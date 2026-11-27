@@ -10,8 +10,15 @@ resource "aws_lb" "this" {
   name               = "${local.name_prefix}-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [var.alb_sg_id]
-  subnets            = var.public_subnet_ids
+  # The partner mTLS listener (see mtls.tf) needs its own SG to restrict
+  # port 8443 ingress to ClearTax CIDRs without widening the public
+  # 80/443 SG owned by the network module. ALBs accept several SGs; the
+  # mTLS SG is appended only when the feature flag is on.
+  security_groups = concat(
+    [var.alb_sg_id],
+    var.enable_cleartax_mtls ? [aws_security_group.alb_mtls[0].id] : []
+  )
+  subnets = var.public_subnet_ids
 
   idle_timeout               = 60
   drop_invalid_header_fields = true

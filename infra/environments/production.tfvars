@@ -16,3 +16,16 @@ vpc_cidr     = "10.21.0.0/16"
 az_count     = 3
 db_multi_az  = true
 enable_infra = true
+
+# ClearTax §5.7 partner mTLS is ON in production. The sensitive inputs
+# (CA bundle S3 bucket/key, ACM cert ARN, partner CIDRs) are deliberately
+# NOT committed here — the deploy workflow applies with a second sealed
+# tfvars file (see docs/runbooks/cleartax-partner-access.md) that sets:
+#   cleartax_ca_bundle_s3_bucket = "..."
+#   cleartax_ca_bundle_s3_key    = "cleartax-ops-ca.pem"
+#   alb_cert_arn                 = "arn:aws:acm:eu-central-1:...:certificate/..."
+#   cleartax_partner_cidrs       = ["203.0.113.0/24", ...]
+# If any of those four is empty at plan time, the resource preconditions
+# in infra/modules/compute/mtls.tf fail the plan with an actionable
+# message rather than materialising a half-configured trust store.
+enable_cleartax_mtls = true
