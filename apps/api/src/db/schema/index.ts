@@ -14,3 +14,4 @@ export * from './firms';
 export * from './firm-imports';
 export * from './audit';
 export * from './tax-documents';
+export * from './platform-status';

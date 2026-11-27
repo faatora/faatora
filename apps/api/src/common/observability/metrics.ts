@@ -111,6 +111,15 @@ export const signingTotal = new Counter({
   registers: [defaultRegistry],
 });
 
+// --- Inbound PagerDuty webhooks --------------------------------------------
+
+export const pagerDutyEventsTotal = new Counter({
+  name: 'faatora_pd_events_total',
+  help: 'Count of verified PagerDuty webhook events received, labeled by event_type and resource_type.',
+  labelNames: ['event_type', 'resource_type'] as const,
+  registers: [defaultRegistry],
+});
+
 /* -------------------------------------------------------------------------- */
 /* Dispatch table + helpers                                                   */
 /*                                                                            */
@@ -125,7 +134,8 @@ type CounterName =
   | 'faatora_invoice_issued_total'
   | 'faatora_clearance_submissions_total'
   | 'faatora_clearance_rejection_reason_total'
-  | 'faatora_signing_total';
+  | 'faatora_signing_total'
+  | 'faatora_pd_events_total';
 
 type HistogramName = 'faatora_http_request_duration_seconds' | 'faatora_clearance_latency_seconds';
 
@@ -140,6 +150,7 @@ const counters: Record<CounterName, Counter<string>> = {
   faatora_clearance_submissions_total: clearanceSubmissionsTotal,
   faatora_clearance_rejection_reason_total: clearanceRejectionReasonTotal,
   faatora_signing_total: signingTotal,
+  faatora_pd_events_total: pagerDutyEventsTotal,
 };
 
 const histograms: Record<HistogramName, Histogram<string>> = {

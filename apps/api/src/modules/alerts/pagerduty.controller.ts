@@ -10,16 +10,27 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { verifyPagerDutySignature } from './pagerduty-signature';
+import { PlatformStatusService } from './platform-status.service';
+import { pagerDutyEventsTotal } from '../../common/observability/metrics';
 
 /**
  * POST /api/webhooks/pagerduty — inbound PagerDuty V3 webhook sink.
  *
  * Delivers incident lifecycle events (`incident.triggered`,
  * `incident.acknowledged`, `incident.resolved`, …) to Faatora. For
- * now this is log-only; follow-ups will:
- *   TODO: write to a public status page row
- *   TODO: notify affected firms (per-tenant status board)
- *   TODO: emit a metric `faatora_pd_events_total`
+ * each verified event we:
+ *
+ *   1. Bump `faatora_pd_events_total{event_type,resource_type}` so
+ *      ops can alert on inbound incident volume.
+ *   2. Hand the event to `PlatformStatusService`, which appends a
+ *      row to `platform_status_events` (public status page) AND
+ *      emits `platform.status.event` on EventEmitter2 for per-tenant
+ *      status-board subscribers.
+ *
+ * Both steps are best-effort — we never 5xx back to PagerDuty for a
+ * downstream failure. PagerDuty retries on 5xx with backoff, and a
+ * persistent retry loop would stall the counter + bus emission
+ * exactly when ops most need them.
  *
  * Security:
  *   - `rawBody: true` on NestFactory.create (main.ts) preserves the
@@ -54,6 +65,8 @@ interface PagerDutyWebhookPayload {
 @Controller('webhooks/pagerduty')
 export class PagerDutyController {
   private readonly log = new Logger(PagerDutyController.name);
+
+  constructor(private readonly status: PlatformStatusService) {}
 
   @Post()
   @HttpCode(200)
@@ -98,6 +111,25 @@ export class PagerDutyController {
       },
       'pagerduty webhook received',
     );
+
+    // Bump the counter once per verified delivery. `unknown` is a
+    // sentinel so a malformed payload still shows up on the dashboard
+    // — "unknown spiked" is a signal worth investigating.
+    pagerDutyEventsTotal.inc({
+      event_type: event?.event_type ?? 'unknown',
+      resource_type: event?.resource_type ?? 'unknown',
+    });
+
+    // record() swallows its own errors — the controller returns 200
+    // either way so PagerDuty does not retry endlessly (see the
+    // availability-vs-durability note on PlatformStatusService).
+    await this.status.record({
+      incidentId: event?.data?.id ?? 'unknown',
+      eventType: event?.event_type ?? 'unknown',
+      summary: event?.data?.summary,
+      occurredAt: event?.occurred_at ? new Date(event.occurred_at) : new Date(),
+      raw: event,
+    });
 
     return { received: true };
   }
